@@ -22,6 +22,7 @@ export type ParseTransactionIntentInput = z.infer<typeof ParseTransactionIntentI
 
 // This schema is now defined and exported from src/app/actions.ts
 // We still need the type for the flow's internal return.
+// This internal schema includes recipientType which might be handled/defaulted in the flow
 const FlowOutputSchema = z.object({
   intent: z
     .enum(['send', 'swap', 'stake', 'unknown'])
@@ -63,7 +64,7 @@ const parseTransactionIntentPrompt = ai.definePrompt({
   name: 'parseTransactionIntentPrompt',
   input: {schema: ParseTransactionIntentInputSchema},
   output: {schema: FlowOutputSchema}, // Use internal FlowOutputSchema
-  prompt: `You are an AI assistant that interprets voice commands to determine the user's transaction intent. Your goal is to extract structured data that could then be used by other systems (like Chainlink Functions or on-chain contracts) to facilitate a transaction. Focus on Avalanche blockchain transactions, but also handle cross-chain intents. Use your knowledge of common blockchain terms, token symbols, network names, and DeFi protocols to make the best possible interpretation.
+  prompt: `You are an AI assistant that interprets voice commands to determine the user's transaction intent. Your goal is to extract structured data that could then be used by other systems (like Chainlink Functions or an Avalanche smart contract containing payment logic) to facilitate a transaction. Focus on Avalanche blockchain transactions, but also handle cross-chain intents. Use your knowledge of common blockchain terms, token symbols, network names, and DeFi protocols to make the best possible interpretation.
 
   Analyze the following voice command: "{{{voiceCommand}}}"
 
@@ -121,3 +122,5 @@ const parseTransactionIntentFlow = ai.defineFlow(
     return output!;
   }
 );
+// Do NOT export ParseTransactionIntentOutputSchema from here
+// export { ParseTransactionIntentOutputSchema };
