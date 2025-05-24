@@ -34,7 +34,7 @@ const VoiceWaveformVisualizer = () => {
       {barHeights.map((height, index) => (
         <div
           key={index}
-          className="w-1.5 bg-purple-400 rounded-full"
+          className="w-1.5 bg-primary/70 rounded-full" // Use theme color
           style={{ height: `${height}px`, animation: `pulseWave 1s ease-in-out ${index * 0.05}s infinite alternate` }}
         />
       ))}
@@ -192,28 +192,28 @@ function VoiceAuthenticationContent() {
   const getAuthIcon = () => {
     switch (authStatus) {
       case 'recording':
-        return <Mic className="h-20 w-20 text-blue-400 animate-pulse" />;
+        return <Mic className="h-20 w-20 text-primary animate-pulse" />;
       case 'processing':
-        return <Search className="h-20 w-20 text-blue-400" />; // Changed from Loader2
+        return <Search className="h-20 w-20 text-primary" />; 
       case 'authenticated':
-        return <ShieldCheck className="h-20 w-20 text-green-400" />;
+        return <ShieldCheck className="h-20 w-20 text-green-500" />; // Use a direct green, or define a --success variable
       case 'failed':
-        return <ShieldX className="h-20 w-20 text-red-400" />;
+        return <ShieldX className="h-20 w-20 text-destructive" />;
       default: // idle
-        return <Lock className="h-20 w-20 text-yellow-400" />;
+        return <Lock className="h-20 w-20 text-accent" />; // Uses theme accent (yellow)
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-700 to-purple-800 flex flex-col items-center justify-center p-4 text-white">
-      <Card className="w-full max-w-md bg-purple-900/50 backdrop-blur-md border-purple-700 shadow-2xl">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 text-foreground">
+      <Card className="w-full max-w-md bg-card/70 backdrop-blur-md border-border shadow-2xl"> {/* Using global card style with slight override for more transparency */}
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold">Voice Authentication</CardTitle>
+          <CardTitle className="text-3xl font-bold text-card-foreground">Voice Authentication</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center space-y-6">
-          <div className="relative w-48 h-48 rounded-full bg-purple-800/70 flex items-center justify-center shadow-inner">
-            <div className="absolute inset-0 rounded-full border-4 border-purple-600/50 animate-pulse"></div>
-            <div className="relative z-10 p-6 rounded-full bg-purple-900/60">
+          <div className="relative w-48 h-48 rounded-full bg-background/30 flex items-center justify-center shadow-inner"> {/* Adjusted background for icon container */}
+            <div className="absolute inset-0 rounded-full border-4 border-primary/50 animate-pulse"></div>
+            <div className="relative z-10 p-6 rounded-full bg-background/50"> {/* Adjusted background for icon */}
               {getAuthIcon()}
             </div>
           </div>
@@ -221,12 +221,12 @@ function VoiceAuthenticationContent() {
           {authStatus === 'processing' && <VoiceWaveformVisualizer />}
           
           <div className="text-center">
-            <p className="text-xl font-semibold">
+            <p className="text-xl font-semibold text-card-foreground">
               {statusTitle}
             </p>
-            <p className="text-sm text-purple-300 mt-1 min-h-[2.2em]">{statusMessage}</p>
+            <p className="text-sm text-muted-foreground mt-1 min-h-[2.2em]">{statusMessage}</p>
             {currentTranscript && (isRecording || authStatus === 'processing') && (
-                 <p className="text-xs text-purple-400 mt-1 italic">"{currentTranscript}"</p>
+                 <p className="text-xs text-muted-foreground/80 mt-1 italic">"{currentTranscript}"</p>
             )}
           </div>
 
@@ -234,7 +234,7 @@ function VoiceAuthenticationContent() {
             <Button 
               onClick={handleStartAuthentication} 
               disabled={!speechApiSupported || isRecording || authStatus === 'processing'}
-              className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold py-3 text-lg rounded-lg shadow-lg transform transition-transform hover:scale-105 active:scale-95"
+              className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-primary-foreground font-semibold py-3 text-lg rounded-lg shadow-lg transform transition-transform hover:scale-105 active:scale-95"
             >
               {isRecording ? <StopCircle className="mr-2 h-5 w-5" /> : <Mic className="mr-2 h-5 w-5" />}
               {isRecording ? 'Stop Recording' : 'Start Authentication'}
@@ -244,26 +244,27 @@ function VoiceAuthenticationContent() {
           {(authStatus === 'authenticated' || authStatus === 'failed') && authStatus !== 'processing' && (
              <Button 
               onClick={() => router.push('/')}
-              className="w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 text-lg rounded-lg shadow-lg"
+              variant="secondary" // Use secondary for a different look
+              className="w-full font-semibold py-3 text-lg rounded-lg shadow-lg"
             >
               Return to Dashboard
             </Button>
           )}
 
-          <div className="w-full p-4 bg-purple-800/60 rounded-lg text-sm space-y-2 border border-purple-700">
-            <h4 className="font-semibold text-purple-200">Transaction to Authorize:</h4>
-            {amount && token && <p>Amount: <span className="font-bold text-white">{amount} {token}</span></p>}
-            {recipient && <p>To: <span className="font-bold text-white">{recipient}</span></p>}
-            {gas && <p>Est. Gas: <span className="font-bold text-white">{gas} {token || 'AVAX'}</span></p>}
-            {!amount && !recipient && <p className="text-purple-400">No transaction details found.</p>}
+          <div className="w-full p-4 bg-muted/30 rounded-lg text-sm space-y-2 border-border"> {/* Adjusted background */}
+            <h4 className="font-semibold text-card-foreground/80">Transaction to Authorize:</h4>
+            {amount && token && <p>Amount: <span className="font-bold text-foreground">{amount} {token}</span></p>}
+            {recipient && <p>To: <span className="font-bold text-foreground">{recipient}</span></p>}
+            {gas && <p>Est. Gas: <span className="font-bold text-foreground">{gas} {token || 'AVAX'}</span></p>}
+            {!amount && !recipient && <p className="text-muted-foreground">No transaction details found.</p>}
           </div>
         </CardContent>
-        <CardFooter className="text-center flex-col space-y-2 pt-6 pb-4 text-xs text-purple-400">
+        <CardFooter className="text-center flex-col space-y-2 pt-6 pb-4 text-xs text-muted-foreground">
           <p className="flex items-center justify-center">
-            <Lock className="h-3 w-3 mr-1.5"/> Voice biometrics stored securely on-chain.
+            <Lock className="h-3 w-3 mr-1.5 text-accent"/> Voice biometrics stored securely on-chain.
           </p>
           <p className="flex items-center justify-center">
-            <Zap className="h-3 w-3 mr-1.5"/> Powered by Avalanche Subnet Technology
+            <Zap className="h-3 w-3 mr-1.5 text-primary"/> Powered by Avalanche Subnet Technology
           </p>
         </CardFooter>
       </Card>
@@ -273,7 +274,7 @@ function VoiceAuthenticationContent() {
 
 export default function VoiceAuthenticationPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-indigo-700 flex items-center justify-center text-white"><Loader2 className="h-12 w-12 animate-spin" />Loading...</div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-foreground"><Loader2 className="h-12 w-12 animate-spin text-primary" />Loading...</div>}>
       <VoiceAuthenticationContent />
     </Suspense>
   );

@@ -263,7 +263,7 @@ export default function VoxChainPayPage() {
   const canConfirmTransaction = parsedIntent && parsedIntent.intent !== 'unknown' && connectedWalletAddress && !isProcessingTransaction && !isProcessingVoice;
 
   return (
-    <div className="container mx-auto max-w-3xl py-8 px-4">
+    <div className="container mx-auto max-w-3xl py-8 px-4 text-foreground">
       <section aria-labelledby="hero-section" className="text-center py-10">
          <Voicemail className="h-16 w-16 text-primary mx-auto mb-4" />
         <h1 id="hero-section" className="text-4xl sm:text-5xl font-bold text-primary">
@@ -274,7 +274,7 @@ export default function VoxChainPayPage() {
         </p>
       </section>
 
-      <Card className="w-full max-w-md mx-auto shadow-xl my-8 bg-card">
+      <Card className="w-full max-w-md mx-auto shadow-xl my-8">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl text-card-foreground">Voice Command Center</CardTitle>
         </CardHeader>
@@ -316,7 +316,7 @@ export default function VoxChainPayPage() {
 
             {voiceCommand && (parsedIntent || intentError) && !isProcessingVoice && (
                 <div className="w-full mt-4 p-4 bg-muted/50 rounded-lg border border-border text-center">
-                    <p className="text-sm font-medium text-foreground mb-1">Recognized Command:</p>
+                    <p className="text-sm font-medium text-card-foreground mb-1">Recognized Command:</p>
                     <p className="text-md text-muted-foreground italic">"{voiceCommand}"</p>
                 </div>
             )}
@@ -328,7 +328,7 @@ export default function VoxChainPayPage() {
         <div className="space-y-3">
           <Button 
             variant="outline" 
-            className="w-full justify-start text-left h-auto py-3 shadow-sm hover:shadow-md transition-shadow bg-card hover:bg-muted/50" 
+            className="w-full justify-start text-left h-auto py-3 shadow-sm hover:shadow-md transition-shadow bg-card hover:bg-muted/50 border-border text-card-foreground hover:text-accent-foreground" 
             onClick={() => handleExampleCommand("Send 0.5 AVAX to Alice")}
             disabled={isProcessingVoice || isRecording}
           >
@@ -336,7 +336,7 @@ export default function VoxChainPayPage() {
           </Button>
           <Button 
             variant="outline" 
-            className="w-full justify-start text-left h-auto py-3 shadow-sm hover:shadow-md transition-shadow bg-card hover:bg-muted/50" 
+            className="w-full justify-start text-left h-auto py-3 shadow-sm hover:shadow-md transition-shadow bg-card hover:bg-muted/50 border-border text-card-foreground hover:text-accent-foreground" 
             onClick={() => handleExampleCommand("Pay 100 USDC to coffee-shop.avax")}
             disabled={isProcessingVoice || isRecording}
           >
@@ -380,11 +380,11 @@ export default function VoxChainPayPage() {
           <Separator />
           <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-card-foreground">
                 <Zap className="h-6 w-6 text-accent" />
                 Confirm Transaction
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-muted-foreground">
                 Review the parsed intent and connect your wallet. Voice authentication will be required.
               </CardDescription>
             </CardHeader>
