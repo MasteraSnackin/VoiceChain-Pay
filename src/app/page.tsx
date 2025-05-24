@@ -3,6 +3,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import IntentDisplay from '@/components/intent-display';
 import WalletConnect from '@/components/wallet-connect';
 import TransactionFeedback, { type TransactionStatus } from '@/components/transaction-feedback';
@@ -11,7 +12,7 @@ import { submitVoiceCommand, type SubmitVoiceCommandOutput } from './actions';
 import type { ParseTransactionIntentOutput } from '@/ai/flows/parse-transaction-intent';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
-import { ArrowRight, Zap, Loader2, Mic, StopCircle, Info } from 'lucide-react';
+import { ArrowRight, Zap, Loader2, Mic, StopCircle, Info, Voicemail } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
 // Helper to broaden type for SpeechRecognitionEvent and SpeechRecognitionErrorEvent
@@ -24,20 +25,21 @@ declare global {
     results: SpeechRecognitionResultList;
     resultIndex: number;
   }
-  interface SpeechRecognitionErrorEvent extends Event { // Changed from ErrorEvent to Event
-    error: string; // Standard SpeechRecognitionError codes
+  interface SpeechRecognitionErrorEvent extends Event { 
+    error: string; 
     message: string;
   }
 }
 
 
 export default function VoxChainPayPage() {
-  const [voiceCommand, setVoiceCommand] = useState<string>(''); // Stores the command that was submitted
+  const router = useRouter();
+  const [voiceCommand, setVoiceCommand] = useState<string>(''); 
   const [parsedIntent, setParsedIntent] = useState<ParseTransactionIntentOutput | null>(null);
   const [intentError, setIntentError] = useState<string | null>(null);
   
-  const [isProcessingVoice, setIsProcessingVoice] = useState<boolean>(false); // For NLU processing
-  const [isProcessingTransaction, setIsProcessingTransaction] = useState<boolean>(false);
+  const [isProcessingVoice, setIsProcessingVoice] = useState<boolean>(false); 
+  const [isProcessingTransaction, setIsProcessingTransaction] = useState<boolean>(false); // Used for final confirmation step before voice auth
   
   const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>('idle');
   const [transactionMessage, setTransactionMessage] = useState<string | null>(null);
@@ -46,9 +48,8 @@ export default function VoxChainPayPage() {
   
   const { toast } = useToast();
 
-  // States for new voice input UI
   const [isRecording, setIsRecording] = useState<boolean>(false);
-  const [currentTranscript, setCurrentTranscript] = useState<string>(''); // Live transcript from mic
+  const [currentTranscript, setCurrentTranscript] = useState<string>(''); 
   const [micStatusText, setMicStatusText] = useState<string>('Tap mic to start voice command');
   const [speechApiSupported, setSpeechApiSupported] = useState<boolean>(true);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -60,8 +61,8 @@ export default function VoxChainPayPage() {
       setMicStatusText('Tap mic to start voice command');
       return;
     }
-    setVoiceCommand(commandToProcess); // Set the command that will be processed and displayed
-    setCurrentTranscript(commandToProcess); // Ensure currentTranscript also reflects this submitted command
+    setVoiceCommand(commandToProcess); 
+    setCurrentTranscript(commandToProcess); 
     setIsProcessingVoice(true);
     setMicStatusText('Processing your command...');
     setParsedIntent(null);
@@ -88,7 +89,7 @@ export default function VoxChainPayPage() {
     } finally {
       setIsProcessingVoice(false);
       setTimeout(() => {
-        if (!isRecording && !isProcessingVoice) { // check !isProcessingVoice to ensure it doesn't reset if another recording started quickly
+        if (!isRecording && !isProcessingVoice) { 
             setMicStatusText('Tap mic to start voice command');
         }
       }, 3000);
@@ -128,11 +129,9 @@ export default function VoxChainPayPage() {
 
       recognition.onend = () => {
         setIsRecording(false);
-        // Only submit if there's a transcript and we are not already mid-processing from a quick stop-start
         if (currentTranscript.trim() && !isProcessingVoice) { 
             handleVoiceCommandSubmit(currentTranscript.trim());
         } else if (!isProcessingVoice) {
-            // If no transcript or already processing, just reset mic status if not processing
             setMicStatusText('Tap mic to start voice command');
         }
       };
@@ -167,7 +166,7 @@ export default function VoxChainPayPage() {
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handleVoiceCommandSubmit, isProcessingVoice]); // currentTranscript removed to prevent re-init on every interim result
+  }, [handleVoiceCommandSubmit, isProcessingVoice]); 
 
   const handleToggleRecording = () => {
     if (!speechApiSupported || !recognitionRef.current) {
@@ -183,7 +182,7 @@ export default function VoxChainPayPage() {
       recognitionRef.current.stop(); 
     } else {
       setCurrentTranscript(''); 
-      setVoiceCommand(''); // Clear the previously submitted command
+      setVoiceCommand(''); 
       setParsedIntent(null); 
       setIntentError(null);
       try {
@@ -219,7 +218,7 @@ export default function VoxChainPayPage() {
     setTransactionMessage(null);
   };
 
-  const handleConfirmTransaction = async () => {
+  const handleProceedToVoiceAuth = async () => {
     if (!parsedIntent || !connectedWalletAddress || parsedIntent.intent === 'unknown') {
       toast({
         title: "Cannot Proceed",
@@ -229,24 +228,19 @@ export default function VoxChainPayPage() {
       return;
     }
 
-    setIsProcessingTransaction(true);
-    setTransactionStatus('processing');
-    setTransactionMessage('Submitting your transaction to the network...');
+    setIsProcessingTransaction(true); // Re-using this state for loading indication
+    
+    const queryParams = new URLSearchParams();
+    if (parsedIntent.amount) queryParams.set('amount', parsedIntent.amount.toString());
+    if (parsedIntent.recipientAddress) queryParams.set('recipient', parsedIntent.recipientAddress);
+    if (parsedIntent.token) queryParams.set('token', parsedIntent.token);
+    // For simplicity, mock gas. In a real app, this would be calculated or fetched.
+    queryParams.set('gas', '0.001'); 
 
-    await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000)); 
-
-    if (Math.random() > 0.2) { 
-      setTransactionStatus('success');
-      const successMsg = `Transaction successful! Action: ${parsedIntent.intent}, Amount: ${parsedIntent.amount || 'N/A'}, To: ${parsedIntent.recipientAddress || 'N/A'}`;
-      setTransactionMessage(successMsg);
-      toast({ title: "Transaction Successful", description: successMsg, variant: "default" });
-    } else {
-      setTransactionStatus('error');
-      const errorMsg = `Transaction failed. Could not complete ${parsedIntent.intent} action. Please try again.`;
-      setTransactionMessage(errorMsg);
-      toast({ title: "Transaction Failed", description: errorMsg, variant: "destructive" });
-    }
-    setIsProcessingTransaction(false);
+    router.push(`/auth/voice?${queryParams.toString()}`);
+    
+    // No longer setting transaction status here, as it will be handled by the voice auth page
+    // setIsProcessingTransaction(false); // Will be set to false on the new page or on error
   };
   
   const canConfirmTransaction = parsedIntent && parsedIntent.intent !== 'unknown' && connectedWalletAddress && !isProcessingTransaction && !isProcessingVoice;
@@ -254,6 +248,7 @@ export default function VoxChainPayPage() {
   return (
     <div className="container mx-auto max-w-3xl py-8 px-4">
       <section aria-labelledby="hero-section" className="text-center py-10">
+         <Voicemail className="h-16 w-16 text-primary mx-auto mb-4" />
         <h1 id="hero-section" className="text-4xl sm:text-5xl font-bold text-primary">
           Voice Payment System
         </h1>
@@ -282,11 +277,9 @@ export default function VoxChainPayPage() {
             {micStatusText}
           </p>
           
-          {/* Live transcript display while recording or if not yet submitted */}
           {currentTranscript && (isRecording || (!isProcessingVoice && !voiceCommand && !parsedIntent && !intentError)) && (
             <p className="text-center text-sm text-foreground mt-1 italic">"{currentTranscript}"</p>
           )}
-
 
           <Button
             variant="default"
@@ -302,23 +295,16 @@ export default function VoxChainPayPage() {
           <p className="text-sm text-muted-foreground h-5 min-h-[1.25rem]">
             {isProcessingVoice ? "" : (isRecording ? "Tap mic to stop" : "")}
           </p>
+
+            {/* Recognized Command Display Section - Integrated */}
+            {voiceCommand && (parsedIntent || intentError) && !isProcessingVoice && (
+                <div className="w-full mt-4 p-4 bg-muted/50 rounded-lg border border-border text-center">
+                    <p className="text-sm font-medium text-foreground mb-1">Recognized Command:</p>
+                    <p className="text-md text-muted-foreground italic">"{voiceCommand}"</p>
+                </div>
+            )}
         </CardContent>
       </Card>
-
-      {/* Recognized Command Display Section */}
-      {voiceCommand && (parsedIntent || intentError) && !isProcessingVoice && (
-        <Card className="w-full max-w-md mx-auto my-6 shadow-md bg-card border border-border">
-          <CardHeader className="pb-3 pt-4">
-            <CardTitle className="text-xl text-card-foreground flex items-center">
-              <Info className="h-5 w-5 mr-2 text-primary" />
-              Recognized Command
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0 pb-4">
-            <p className="text-lg text-muted-foreground italic">"{voiceCommand}"</p>
-          </CardContent>
-        </Card>
-      )}
 
       <section aria-labelledby="try-saying-section" className="mt-10 max-w-md mx-auto">
         <h3 id="try-saying-section" className="text-lg font-semibold text-center mb-4 text-foreground">Try saying:</h3>
@@ -344,7 +330,7 @@ export default function VoxChainPayPage() {
       
       {(parsedIntent || intentError) && <Separator className="my-10" />}
 
-      <div className="space-y-8 mt-2"> {/* Reduced margin top if no separator */}
+      <div className="space-y-8 mt-2"> 
         {(parsedIntent || intentError) && (
           <section aria-labelledby="transaction-details-section" className="space-y-6">
             <h2 id="transaction-details-section" className="sr-only">Transaction Details</h2>
@@ -382,18 +368,18 @@ export default function VoxChainPayPage() {
                 Confirm Transaction
               </CardTitle>
               <CardDescription>
-                Review the parsed intent and connect your wallet to confirm the transaction.
+                Review the parsed intent and connect your wallet. Voice authentication will be required.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
                 Please review the parsed intent and ensure your wallet is connected before proceeding.
-                This is a simulated transaction.
+                You will be asked to authenticate with your voice.
               </p>
             </CardContent>
             <CardFooter>
               <Button 
-                onClick={handleConfirmTransaction} 
+                onClick={handleProceedToVoiceAuth} 
                 disabled={!canConfirmTransaction}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                 size="lg"
@@ -403,7 +389,7 @@ export default function VoxChainPayPage() {
                 ) : (
                   <ArrowRight className="mr-2 h-5 w-5" />
                 )}
-                Confirm & Send (Mock)
+                Proceed to Voice Authentication
               </Button>
             </CardFooter>
           </Card>
