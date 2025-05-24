@@ -11,7 +11,7 @@ import { submitVoiceCommand, type SubmitVoiceCommandOutput } from './actions';
 import type { ParseTransactionIntentOutput } from '@/ai/flows/parse-transaction-intent';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
-import { ArrowRight, Zap, Loader2, Mic, StopCircle } from 'lucide-react';
+import { ArrowRight, Zap, Loader2, Mic, StopCircle, Info } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
 // Helper to broaden type for SpeechRecognitionEvent and SpeechRecognitionErrorEvent
@@ -32,7 +32,7 @@ declare global {
 
 
 export default function VoxChainPayPage() {
-  const [voiceCommand, setVoiceCommand] = useState<string>('');
+  const [voiceCommand, setVoiceCommand] = useState<string>(''); // Stores the command that was submitted
   const [parsedIntent, setParsedIntent] = useState<ParseTransactionIntentOutput | null>(null);
   const [intentError, setIntentError] = useState<string | null>(null);
   
@@ -48,21 +48,20 @@ export default function VoxChainPayPage() {
 
   // States for new voice input UI
   const [isRecording, setIsRecording] = useState<boolean>(false);
-  const [currentTranscript, setCurrentTranscript] = useState<string>('');
+  const [currentTranscript, setCurrentTranscript] = useState<string>(''); // Live transcript from mic
   const [micStatusText, setMicStatusText] = useState<string>('Tap mic to start voice command');
   const [speechApiSupported, setSpeechApiSupported] = useState<boolean>(true);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
-  const handleVoiceCommandSubmit = useCallback(async (command: string) => {
-    if (!command.trim()) {
-      // toast({ title: "Empty Command", description: "Cannot process an empty command.", variant: "default" });
-      // Silently ignore empty commands that might come from quick stop after start.
+  const handleVoiceCommandSubmit = useCallback(async (commandToProcess: string) => {
+    if (!commandToProcess.trim()) {
       setIsProcessingVoice(false);
       setCurrentTranscript('');
       setMicStatusText('Tap mic to start voice command');
       return;
     }
-    setVoiceCommand(command);
+    setVoiceCommand(commandToProcess); // Set the command that will be processed and displayed
+    setCurrentTranscript(commandToProcess); // Ensure currentTranscript also reflects this submitted command
     setIsProcessingVoice(true);
     setMicStatusText('Processing your command...');
     setParsedIntent(null);
@@ -71,15 +70,15 @@ export default function VoxChainPayPage() {
     setTransactionMessage(null);
 
     try {
-      const result: SubmitVoiceCommandOutput = await submitVoiceCommand({ voiceCommand: command });
+      const result: SubmitVoiceCommandOutput = await submitVoiceCommand({ voiceCommand: commandToProcess });
       if ('error' in result) {
         setIntentError(result.error);
         toast({ title: "Intent Parsing Error", description: result.error, variant: "destructive" });
-        setMicStatusText('Error parsing. Try again.');
+        setMicStatusText('Error processing command. Try again.');
       } else {
         setParsedIntent(result);
         toast({ title: "Intent Parsed", description: `Action: ${result.intent}`, variant: "default" });
-        setMicStatusText('Command processed!');
+        setMicStatusText('Command processed! Review details below.');
       }
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : "An unexpected error occurred.";
@@ -88,12 +87,13 @@ export default function VoxChainPayPage() {
       setMicStatusText('System error. Try again.');
     } finally {
       setIsProcessingVoice(false);
-      // setCurrentTranscript(''); // Clear transcript after processing - NO, keep it visible for review
       setTimeout(() => {
-        if (!isRecording) setMicStatusText('Tap mic to start voice command')
+        if (!isRecording && !isProcessingVoice) { // check !isProcessingVoice to ensure it doesn't reset if another recording started quickly
+            setMicStatusText('Tap mic to start voice command');
+        }
       }, 3000);
     }
-  }, [toast, isRecording]);
+  }, [toast, isRecording, isProcessingVoice]);
 
 
   useEffect(() => {
@@ -128,9 +128,12 @@ export default function VoxChainPayPage() {
 
       recognition.onend = () => {
         setIsRecording(false);
-        setMicStatusText('Tap mic to start voice command');
-        if (currentTranscript.trim() && !isProcessingVoice) { // check !isProcessingVoice to avoid double submission
+        // Only submit if there's a transcript and we are not already mid-processing from a quick stop-start
+        if (currentTranscript.trim() && !isProcessingVoice) { 
             handleVoiceCommandSubmit(currentTranscript.trim());
+        } else if (!isProcessingVoice) {
+            // If no transcript or already processing, just reset mic status if not processing
+            setMicStatusText('Tap mic to start voice command');
         }
       };
 
@@ -163,7 +166,8 @@ export default function VoxChainPayPage() {
         recognitionRef.current.stop();
       }
     };
-  }, [toast, handleVoiceCommandSubmit, isProcessingVoice]); // Added isProcessingVoice to deps of useEffect
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handleVoiceCommandSubmit, isProcessingVoice]); // currentTranscript removed to prevent re-init on every interim result
 
   const handleToggleRecording = () => {
     if (!speechApiSupported || !recognitionRef.current) {
@@ -179,7 +183,8 @@ export default function VoxChainPayPage() {
       recognitionRef.current.stop(); 
     } else {
       setCurrentTranscript(''); 
-      setParsedIntent(null); // Clear previous intent when starting new recording
+      setVoiceCommand(''); // Clear the previously submitted command
+      setParsedIntent(null); 
       setIntentError(null);
       try {
         recognitionRef.current.start();
@@ -274,8 +279,14 @@ export default function VoxChainPayPage() {
           </div>
 
           <p className="text-lg text-muted-foreground h-6 min-h-[1.5rem] text-center px-2">
-            {isProcessingVoice ? "Processing..." : isRecording ? "Listening..." : (currentTranscript && !parsedIntent && !intentError ? `Thinking about: "${currentTranscript}"` : micStatusText)}
+            {micStatusText}
           </p>
+          
+          {/* Live transcript display while recording or if not yet submitted */}
+          {currentTranscript && (isRecording || (!isProcessingVoice && !voiceCommand && !parsedIntent && !intentError)) && (
+            <p className="text-center text-sm text-foreground mt-1 italic">"{currentTranscript}"</p>
+          )}
+
 
           <Button
             variant="default"
@@ -288,15 +299,26 @@ export default function VoxChainPayPage() {
             {isRecording ? <StopCircle className="h-16 w-16 text-primary-foreground" /> : <Mic className="h-16 w-16 text-primary-foreground" />}
           </Button>
           
-          {currentTranscript && !isRecording && !isProcessingVoice && !parsedIntent && !intentError && (
-            <p className="text-center text-sm text-foreground mt-2 italic">You said: "{currentTranscript}"</p>
-          )}
-
           <p className="text-sm text-muted-foreground h-5 min-h-[1.25rem]">
             {isProcessingVoice ? "" : (isRecording ? "Tap mic to stop" : "")}
           </p>
         </CardContent>
       </Card>
+
+      {/* Recognized Command Display Section */}
+      {voiceCommand && (parsedIntent || intentError) && !isProcessingVoice && (
+        <Card className="w-full max-w-md mx-auto my-6 shadow-md bg-card border border-border">
+          <CardHeader className="pb-3 pt-4">
+            <CardTitle className="text-xl text-card-foreground flex items-center">
+              <Info className="h-5 w-5 mr-2 text-primary" />
+              Recognized Command
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0 pb-4">
+            <p className="text-lg text-muted-foreground italic">"{voiceCommand}"</p>
+          </CardContent>
+        </Card>
+      )}
 
       <section aria-labelledby="try-saying-section" className="mt-10 max-w-md mx-auto">
         <h3 id="try-saying-section" className="text-lg font-semibold text-center mb-4 text-foreground">Try saying:</h3>
