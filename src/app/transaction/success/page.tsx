@@ -7,17 +7,27 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Lock, Zap, ArrowLeft, Loader2, Settings2, Network, LinkIcon } from 'lucide-react';
+import { CheckCircle, Lock, Zap, ArrowLeft, Loader2, Settings2, Network, LinkIcon, UserCheck, FileJson, HelpCircle } from 'lucide-react';
 import { format } from 'date-fns';
+
+type RecipientType = 'EOA' | 'SmartContract' | 'Unknown' | null;
 
 interface DetailRowProps {
   label: string;
   value: string | React.ReactNode;
   isNetwork?: boolean;
   isProtocol?: boolean;
+  isRecipientType?: boolean;
+  recipientTypeVal?: RecipientType;
 }
 
-const DetailRow: React.FC<DetailRowProps> = ({ label, value, isNetwork, isProtocol }) => (
+const RecipientTypeIcon: React.FC<{ type: RecipientType }> = ({ type }) => {
+  if (type === 'EOA') return <UserCheck className="h-4 w-4 text-blue-500 mr-2" />;
+  if (type === 'SmartContract') return <FileJson className="h-4 w-4 text-purple-500 mr-2" />;
+  return <HelpCircle className="h-4 w-4 text-muted-foreground mr-2" />;
+};
+
+const DetailRow: React.FC<DetailRowProps> = ({ label, value, isNetwork, isProtocol, isRecipientType, recipientTypeVal }) => (
   <div className="flex justify-between items-center bg-card/60 p-3 rounded-lg my-1.5 shadow-sm hover:shadow-md transition-shadow">
     <span className="text-muted-foreground text-sm">{label}</span>
     {isNetwork ? (
@@ -28,6 +38,11 @@ const DetailRow: React.FC<DetailRowProps> = ({ label, value, isNetwork, isProtoc
     ) : isProtocol ? (
       <div className="flex items-center">
         <Settings2 className="h-4 w-4 text-primary mr-2" />
+        <span className="text-foreground font-semibold text-sm">{value}</span>
+      </div>
+    ) : isRecipientType ? (
+       <div className="flex items-center">
+        <RecipientTypeIcon type={recipientTypeVal} />
         <span className="text-foreground font-semibold text-sm">{value}</span>
       </div>
     ) : (
@@ -42,6 +57,7 @@ function TransactionSuccessContent() {
 
   const [amount, setAmount] = useState<string | null>(null);
   const [recipient, setRecipient] = useState<string | null>(null);
+  const [recipientType, setRecipientType] = useState<RecipientType>(null);
   const [token, setToken] = useState<string | null>(null);
   const [gas, setGas] = useState<string | null>(null);
   const [protocol, setProtocol] = useState<string | null>(null);
@@ -51,12 +67,15 @@ function TransactionSuccessContent() {
   useEffect(() => {
     setAmount(searchParams.get('amount'));
     setRecipient(searchParams.get('recipient'));
+    setRecipientType(searchParams.get('recipientType') as RecipientType);
     setToken(searchParams.get('token'));
     setGas(searchParams.get('gas'));
     const protocolParam = searchParams.get('protocol');
     setProtocol(protocolParam);
     if (protocolParam && protocolParam !== 'SameChain') {
       setDestinationChain(searchParams.get('destinationChain'));
+    } else {
+      setDestinationChain(null); // Ensure destinationChain is null for SameChain
     }
     setCreationTime(format(new Date(), "dd/MM/yyyy, HH:mm:ss"));
   }, [searchParams]);
@@ -74,14 +93,16 @@ function TransactionSuccessContent() {
 
   if (protocol === 'CCIP') {
     successTitle = "Cross-Chain Tx Initiated (CCIP)";
-    successMessage = `Your CCIP transaction to ${recipient || 'recipient'} on ${destinationChain || 'destination'} for ${amount || 'amount'} ${token || ''} has been initiated via Chainlink CCIP.`;
-    protocolFooterMessage = "Powered by Chainlink CCIP";
+    successMessage = `Your CCIP transaction to ${recipient || 'recipient'} on ${destinationChain || 'destination'} for ${amount || 'amount'} ${token || ''} has been initiated.`;
+    protocolFooterMessage = "Securely transferred via Chainlink CCIP, leveraging its Risk Management Network for enhanced security.";
     protocolDisplayName = "Chainlink CCIP";
   } else if (protocol === 'AvalancheTeleporter') {
     successTitle = "Subnet Tx Initiated (Teleporter)";
-    successMessage = `Your transaction to ${recipient || 'recipient'} on ${destinationChain || 'destination subnet'} for ${amount || 'amount'} ${token || ''} has been initiated via Avalanche Teleporter.`;
-    protocolFooterMessage = "Powered by Avalanche Teleporter (AWM/ICM)";
+    successMessage = `Your transaction to ${recipient || 'recipient'} on ${destinationChain || 'destination subnet'} for ${amount || 'amount'} ${token || ''} has been initiated.`;
+    protocolFooterMessage = "Securely transferred via Avalanche Teleporter, utilizing AWM/ICM for validated and secure cross-subnet communication.";
     protocolDisplayName = "Avalanche Teleporter";
+  } else if (protocol === 'SameChain') {
+     protocolDisplayName = "Same Chain Transfer";
   }
 
 
@@ -100,10 +121,11 @@ function TransactionSuccessContent() {
         </CardHeader>
         <CardContent className="space-y-2">
           <DetailRow label="Amount" value={`${amount || 'N/A'} ${token || ''}`} />
-          <DetailRow label="Recipient" value={recipient || 'N/A'} />
+          <DetailRow label="Recipient Address" value={recipient || 'N/A'} />
+          {recipientType && <DetailRow label="Recipient Type" value={recipientType} isRecipientType recipientTypeVal={recipientType} />}
           <DetailRow label="Source Network" value={sourceNetworkName} isNetwork />
           {isCrossChain && destinationChain && <DetailRow label="Destination Network" value={destinationChain} isNetwork />}
-          {isCrossChain && protocolDisplayName && <DetailRow label="Cross-Chain Protocol" value={protocolDisplayName} isProtocol />}
+          {protocolDisplayName && <DetailRow label={isCrossChain ? "Cross-Chain Protocol" : "Transfer Type"} value={protocolDisplayName} isProtocol={isCrossChain} />}
           <DetailRow label="Est. Gas Fee" value={`${gas || '0.001'} ${token || 'AVAX'}`} />
 
           <Card className="bg-card/60 shadow-md mt-3">
@@ -167,4 +189,4 @@ export default function TransactionSuccessPage() {
     </Suspense>
   );
 }
-
+```
