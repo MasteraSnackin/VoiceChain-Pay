@@ -39,7 +39,7 @@ export default function VoxChainPayPage() {
   const [intentError, setIntentError] = useState<string | null>(null);
   
   const [isProcessingVoice, setIsProcessingVoice] = useState<boolean>(false); 
-  const [isProcessingTransaction, setIsProcessingTransaction] = useState<boolean>(false); // Used for final confirmation step before voice auth
+  const [isProcessingTransaction, setIsProcessingTransaction] = useState<boolean>(false);
   
   const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>('idle');
   const [transactionMessage, setTransactionMessage] = useState<string | null>(null);
@@ -52,17 +52,34 @@ export default function VoxChainPayPage() {
   const [currentTranscript, setCurrentTranscript] = useState<string>(''); 
   const [micStatusText, setMicStatusText] = useState<string>('Tap mic to start voice command');
   const [speechApiSupported, setSpeechApiSupported] = useState<boolean>(true);
+  
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const currentTranscriptRef = useRef(currentTranscript);
+  const isProcessingVoiceRef = useRef(isProcessingVoice);
+  const isRecordingRef = useRef(isRecording);
+
+  useEffect(() => {
+    currentTranscriptRef.current = currentTranscript;
+  }, [currentTranscript]);
+
+  useEffect(() => {
+    isProcessingVoiceRef.current = isProcessingVoice;
+  }, [isProcessingVoice]);
+
+  useEffect(() => {
+    isRecordingRef.current = isRecording;
+  }, [isRecording]);
 
   const handleVoiceCommandSubmit = useCallback(async (commandToProcess: string) => {
     if (!commandToProcess.trim()) {
-      setIsProcessingVoice(false);
-      setCurrentTranscript('');
-      setMicStatusText('Tap mic to start voice command');
+      if (!isProcessingVoiceRef.current) {
+          setMicStatusText('Tap mic to start voice command');
+          setCurrentTranscript(''); 
+      }
       return;
     }
-    setVoiceCommand(commandToProcess); 
-    setCurrentTranscript(commandToProcess); 
+
+    setVoiceCommand(commandToProcess);
     setIsProcessingVoice(true);
     setMicStatusText('Processing your command...');
     setParsedIntent(null);
@@ -89,74 +106,77 @@ export default function VoxChainPayPage() {
     } finally {
       setIsProcessingVoice(false);
       setTimeout(() => {
-        if (!isRecording && !isProcessingVoice) { 
+        if (!isRecordingRef.current && !isProcessingVoiceRef.current) {
             setMicStatusText('Tap mic to start voice command');
         }
       }, 3000);
     }
-  }, [toast, isRecording, isProcessingVoice]);
+  }, [toast, setVoiceCommand, setIsProcessingVoice, setMicStatusText, setParsedIntent, setIntentError, setTransactionStatus, setTransactionMessage, setCurrentTranscript]);
 
 
   useEffect(() => {
     const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognitionAPI) {
       setSpeechApiSupported(false);
-      setMicStatusText('Voice input not supported.');
+      setMicStatusText('Voice input not supported by your browser.');
       toast({
         title: "Speech Recognition Not Supported",
         description: "Your browser does not support the Web Speech API. Try example commands.",
         variant: "destructive",
       });
-    } else {
-       recognitionRef.current = new SpeechRecognitionAPI();
-       const recognition = recognitionRef.current!;
-       recognition.continuous = false; 
-       recognition.interimResults = true; 
-       recognition.lang = 'en-US';
-
-       recognition.onresult = (event: SpeechRecognitionEvent) => {
-        let interimTranscript = '';
-        let finalTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          } else {
-            interimTranscript += event.results[i][0].transcript;
-          }
-        }
-        setCurrentTranscript(finalTranscript || interimTranscript);
-      };
-
-      recognition.onend = () => {
-        setIsRecording(false);
-        if (currentTranscript.trim() && !isProcessingVoice) { 
-            handleVoiceCommandSubmit(currentTranscript.trim());
-        } else if (!isProcessingVoice) {
-            setMicStatusText('Tap mic to start voice command');
-        }
-      };
-
-      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error("Speech recognition error", event.error, event.message);
-        let errorMsg = event.message || "An error occurred during speech recognition.";
-        if (event.error === 'no-speech') {
-          errorMsg = "No speech was detected. Please try again.";
-        } else if (event.error === 'audio-capture') {
-          errorMsg = "Audio capture failed. Ensure microphone is enabled and working.";
-        } else if (event.error === 'not-allowed') {
-          errorMsg = "Microphone access denied. Please allow microphone access.";
-        }
-        toast({
-          title: "Speech Recognition Error",
-          description: errorMsg,
-          variant: "destructive",
-        });
-        setIsRecording(false);
-        setMicStatusText('Tap mic to start voice command');
-        setCurrentTranscript('');
-      };
+      return;
     }
+    
+    recognitionRef.current = new SpeechRecognitionAPI();
+    const recognition = recognitionRef.current!;
+    recognition.continuous = false; 
+    recognition.interimResults = true; 
+    recognition.lang = 'en-US';
 
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let interimTranscript = '';
+      let finalTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+      const newTranscript = finalTranscript || interimTranscript;
+      setCurrentTranscript(newTranscript); // For UI display
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+      const commandToProcess = currentTranscriptRef.current.trim();
+      if (commandToProcess && !isProcessingVoiceRef.current) { 
+        handleVoiceCommandSubmit(commandToProcess);
+      } else if (!isProcessingVoiceRef.current) {
+        setMicStatusText('Tap mic to start voice command');
+      }
+    };
+
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      console.error("Speech recognition error", event.error, event.message);
+      let errorMsg = event.message || "An error occurred during speech recognition.";
+      if (event.error === 'no-speech') {
+        errorMsg = "No speech was detected. Please try again.";
+      } else if (event.error === 'audio-capture') {
+        errorMsg = "Audio capture failed. Ensure microphone is enabled and working.";
+      } else if (event.error === 'not-allowed') {
+        errorMsg = "Microphone access denied. Please allow microphone access.";
+      }
+      toast({
+        title: "Speech Recognition Error",
+        description: errorMsg,
+        variant: "destructive",
+      });
+      setIsRecording(false);
+      setMicStatusText('Tap mic to start voice command');
+      setCurrentTranscript('');
+    };
+    
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.onresult = null;
@@ -166,9 +186,9 @@ export default function VoxChainPayPage() {
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handleVoiceCommandSubmit, isProcessingVoice]); 
+  }, [speechApiSupported, toast, handleVoiceCommandSubmit]); // handleVoiceCommandSubmit is stable
 
-  const handleToggleRecording = () => {
+  const handleToggleRecording = useCallback(() => {
     if (!speechApiSupported || !recognitionRef.current) {
       toast({
         title: "Cannot Record",
@@ -178,8 +198,9 @@ export default function VoxChainPayPage() {
       return;
     }
 
-    if (isRecording) {
+    if (isRecordingRef.current) {
       recognitionRef.current.stop(); 
+      // onend will handle setIsRecording(false) and subsequent logic
     } else {
       setCurrentTranscript(''); 
       setVoiceCommand(''); 
@@ -200,7 +221,7 @@ export default function VoxChainPayPage() {
         setMicStatusText('Tap mic to start voice command');
       }
     }
-  };
+  }, [speechApiSupported, toast, setCurrentTranscript, setVoiceCommand, setParsedIntent, setIntentError, setIsRecording, setMicStatusText]);
 
   const handleExampleCommand = (command: string) => {
     setCurrentTranscript(command); 
@@ -228,19 +249,15 @@ export default function VoxChainPayPage() {
       return;
     }
 
-    setIsProcessingTransaction(true); // Re-using this state for loading indication
+    setIsProcessingTransaction(true);
     
     const queryParams = new URLSearchParams();
     if (parsedIntent.amount) queryParams.set('amount', parsedIntent.amount.toString());
     if (parsedIntent.recipientAddress) queryParams.set('recipient', parsedIntent.recipientAddress);
     if (parsedIntent.token) queryParams.set('token', parsedIntent.token);
-    // For simplicity, mock gas. In a real app, this would be calculated or fetched.
     queryParams.set('gas', '0.001'); 
 
     router.push(`/auth/voice?${queryParams.toString()}`);
-    
-    // No longer setting transaction status here, as it will be handled by the voice auth page
-    // setIsProcessingTransaction(false); // Will be set to false on the new page or on error
   };
   
   const canConfirmTransaction = parsedIntent && parsedIntent.intent !== 'unknown' && connectedWalletAddress && !isProcessingTransaction && !isProcessingVoice;
@@ -277,9 +294,10 @@ export default function VoxChainPayPage() {
             {micStatusText}
           </p>
           
-          {currentTranscript && (isRecording || (!isProcessingVoice && !voiceCommand && !parsedIntent && !intentError)) && (
-            <p className="text-center text-sm text-foreground mt-1 italic">"{currentTranscript}"</p>
+          {currentTranscript && (isRecording || isProcessingVoice || (voiceCommand && (parsedIntent || intentError))) && (
+            <p className="text-center text-sm text-foreground mt-1 italic max-w-xs truncate" title={currentTranscript}>"{currentTranscript}"</p>
           )}
+
 
           <Button
             variant="default"
@@ -296,7 +314,6 @@ export default function VoxChainPayPage() {
             {isProcessingVoice ? "" : (isRecording ? "Tap mic to stop" : "")}
           </p>
 
-            {/* Recognized Command Display Section - Integrated */}
             {voiceCommand && (parsedIntent || intentError) && !isProcessingVoice && (
                 <div className="w-full mt-4 p-4 bg-muted/50 rounded-lg border border-border text-center">
                     <p className="text-sm font-medium text-foreground mb-1">Recognized Command:</p>
@@ -399,4 +416,3 @@ export default function VoxChainPayPage() {
     </div>
   );
 }
-
