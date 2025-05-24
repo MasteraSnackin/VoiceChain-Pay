@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { generateVoiceAuthHash } from '@/ai/flows/generate-voice-auth-hash';
-import { Lock, Mic, StopCircle, Loader2, ShieldCheck, ShieldX, Zap, Search, UserCheck, FileJson, HelpCircle, Coins, MapPin, NetworkIcon, Fuel } from 'lucide-react';
+import { Lock, Mic, StopCircle, Loader2, ShieldCheck, ShieldX, Zap, Search, UserCheck, FileJson, HelpCircle, Coins, MapPin, NetworkIcon, Fuel, Check } from 'lucide-react';
 
 // Helper to broaden type for SpeechRecognitionEvent and SpeechRecognitionErrorEvent
 declare global {
@@ -113,18 +113,19 @@ function VoiceAuthenticationContent() {
     setDestinationChain(searchParams.get('destinationChain'));
   }, [searchParams]);
 
+  const handleConfirmTransaction = () => {
+    const currentParams = new URLSearchParams(searchParams.toString());
+    if (recipientType) currentParams.set('recipientType', recipientType);
+    router.push(`/transaction/success?${currentParams.toString()}`);
+  };
+
   const handleAuthenticationResult = (success: boolean, voiceHash?: string) => {
     if (success) {
       setAuthStatus('authenticated');
       setStatusTitle('Authenticated!');
-      setStatusMessage(`Authenticated successfully! Voice Hash: ${voiceHash?.substring(0,10)}...`);
-      toast({ title: 'Authentication Successful', description: 'Transaction authorized. Redirecting to details page...', variant: 'default' });
-
-      const currentParams = new URLSearchParams(searchParams.toString());
-      // Ensure all relevant params are passed, especially recipientType
-      if (recipientType) currentParams.set('recipientType', recipientType);
-      router.push(`/transaction/success?${currentParams.toString()}`);
-
+      setStatusMessage(`Voice signature verified! Hash: ${voiceHash?.substring(0,10)}...`);
+      toast({ title: 'Authentication Successful', description: 'Please confirm the transaction to proceed.', variant: 'default' });
+      // No automatic redirect here, user will click "Confirm Transaction"
     } else {
       setAuthStatus('failed');
       setStatusTitle('Authentication Failed');
@@ -282,11 +283,21 @@ function VoiceAuthenticationContent() {
               className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-primary-foreground font-semibold py-3 text-lg rounded-lg shadow-lg transform transition-transform hover:scale-105 active:scale-95"
             >
               {isRecording ? <StopCircle className="mr-2 h-5 w-5" /> : <Mic className="mr-2 h-5 w-5" />}
-              {isRecording ? 'Stop Recording' : 'Start Authentication'}
+              {isRecording ? 'Stop Recording' : (authStatus === 'failed' ? 'Retry Authentication' : 'Start Authentication')}
+            </Button>
+          )}
+          
+          {authStatus === 'authenticated' && (
+            <Button
+              onClick={handleConfirmTransaction}
+              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-primary-foreground font-semibold py-3 text-lg rounded-lg shadow-lg transform transition-transform hover:scale-105 active:scale-95"
+            >
+              <Check className="mr-2 h-5 w-5" />
+              Confirm Transaction
             </Button>
           )}
 
-          {(authStatus === 'authenticated' || authStatus === 'failed') && authStatus !== 'processing' && (
+          {(authStatus === 'failed' || authStatus === 'authenticated') && authStatus !== 'processing' && (
              <Button
               onClick={() => router.push('/')}
               variant="secondary"
@@ -295,6 +306,7 @@ function VoiceAuthenticationContent() {
               Return to Dashboard
             </Button>
           )}
+
 
           <div className="w-full p-4 bg-muted/30 rounded-lg text-sm space-y-1 border border-border shadow-inner">
             <h4 className="font-semibold text-card-foreground/90 mb-2 text-md">Transaction to Authorize:</h4>
@@ -327,3 +339,4 @@ export default function VoiceAuthenticationPage() {
     </Suspense>
   );
 }
+
