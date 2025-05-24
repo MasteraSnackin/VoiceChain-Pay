@@ -35,7 +35,7 @@ const VoiceWaveformVisualizer = () => {
       {barHeights.map((height, index) => (
         <div
           key={index}
-          className="w-1.5 bg-primary/70 rounded-full" // Use theme color
+          className="w-1.5 bg-primary/70 rounded-full" 
           style={{ height: `${height}px`, animation: `pulseWave 1s ease-in-out ${index * 0.05}s infinite alternate` }}
         />
       ))}
@@ -59,6 +59,8 @@ function VoiceAuthenticationContent() {
   const [recipient, setRecipient] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [gas, setGas] = useState<string | null>(null);
+  const [protocol, setProtocol] = useState<string | null>(null);
+
 
   const [authStatus, setAuthStatus] = useState<AuthStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('Verify your identity to complete the transaction.');
@@ -73,6 +75,7 @@ function VoiceAuthenticationContent() {
     setRecipient(searchParams.get('recipient'));
     setToken(searchParams.get('token'));
     setGas(searchParams.get('gas'));
+    setProtocol(searchParams.get('protocol'));
   }, [searchParams]);
 
   const handleAuthenticationResult = (success: boolean, voiceHash?: string) => {
@@ -82,7 +85,7 @@ function VoiceAuthenticationContent() {
       setStatusMessage(`Authenticated successfully! Voice Hash: ${voiceHash?.substring(0,10)}...`);
       toast({ title: 'Authentication Successful', description: 'Transaction authorized. Redirecting to details page...', variant: 'default' });
       
-      const currentParams = new URLSearchParams(searchParams.toString());
+      const currentParams = new URLSearchParams(searchParams.toString()); // Carries over all existing params
       router.push(`/transaction/success?${currentParams.toString()}`);
 
     } else {
@@ -103,7 +106,6 @@ function VoiceAuthenticationContent() {
       const { voiceAuthHash } = await generateVoiceAuthHash({ voiceSampleDataUri: audioDataUri });
       console.log('Generated Voice Auth Hash:', voiceAuthHash);
       // Simulate authentication success/failure
-      // In a real app, this would involve comparing the hash against a stored one
       const mockAuthSuccess = Math.random() > 0.3; // 70% chance of success for demo
       handleAuthenticationResult(mockAuthSuccess, voiceAuthHash);
     } catch (error) {
@@ -128,25 +130,20 @@ function VoiceAuthenticationContent() {
     
     recognitionRef.current = new SpeechRecognitionAPI();
     const recognition = recognitionRef.current!;
-    recognition.continuous = false; // Stop after first pause
-    recognition.interimResults = false; // We only need final results
+    recognition.continuous = false; 
+    recognition.interimResults = false; 
     recognition.lang = 'en-US';
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       const transcript = event.results[0][0].transcript;
       setCurrentTranscript(transcript);
-      // For this demo, we'll use the transcript itself as a stand-in for audio data.
-      // In a real app, you'd capture actual audio (e.g. using MediaRecorder),
-      // encode it (e.g. to WAV or Opus), and then create a base64 data URI.
-      const pseudoAudioData = btoa(transcript); // Base64 encode the transcript
-      const pseudoAudioDataUri = `data:text/plain;base64,${pseudoAudioData}`; // Create a data URI
+      const pseudoAudioData = btoa(transcript); 
+      const pseudoAudioDataUri = `data:text/plain;base64,${pseudoAudioData}`; 
       processVoiceSample(pseudoAudioDataUri);
     };
 
     recognition.onend = () => {
       setIsRecording(false);
-      // If recognition ends without a result (e.g., user stopped speaking before command given)
-      // and we are still in 'recording' status, revert to 'idle'.
       if (authStatus === 'recording' && !currentTranscript) { 
         setAuthStatus('idle');
         setStatusTitle('Authentication Required');
@@ -163,17 +160,16 @@ function VoiceAuthenticationContent() {
       toast({ title: "Microphone Error", description: event.message || event.error, variant: "destructive" });
     };
     
-    // Cleanup function
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.onresult = null;
         recognitionRef.current.onend = null;
         recognitionRef.current.onerror = null;
-        recognitionRef.current.stop(); // Ensure recognition is stopped when component unmounts
+        recognitionRef.current.stop(); 
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authStatus, currentTranscript]); // Added authStatus and currentTranscript to dependencies
+  }, [authStatus, currentTranscript]); // Keep dependencies minimal but correct
 
   const handleStartAuthentication = () => {
     if (!speechApiSupported || !recognitionRef.current) {
@@ -181,12 +177,12 @@ function VoiceAuthenticationContent() {
       return;
     }
     if (isRecording) {
-      recognitionRef.current.stop(); // This will trigger 'onend' and then 'onresult' if speech was captured
+      recognitionRef.current.stop(); 
     } else {
-      setCurrentTranscript(''); // Clear previous transcript
+      setCurrentTranscript(''); 
       setAuthStatus('recording');
       setStatusTitle('Recording...');
-      setStatusMessage('Say the passphrase: "My voice is my password."'); // Example passphrase instruction
+      setStatusMessage('Say the passphrase: "My voice is my password."'); 
       try {
         recognitionRef.current.start();
         setIsRecording(true);
@@ -255,7 +251,7 @@ function VoiceAuthenticationContent() {
 
           {(authStatus === 'authenticated' || authStatus === 'failed') && authStatus !== 'processing' && (
              <Button 
-              onClick={() => router.push('/')} // Go back to dashboard on fail or if user clicks before auto-redirect
+              onClick={() => router.push('/')} 
               variant="secondary" 
               className="w-full font-semibold py-3 text-lg rounded-lg shadow-lg"
             >
@@ -268,6 +264,7 @@ function VoiceAuthenticationContent() {
             {amount && token && <p>Amount: <span className="font-bold text-foreground">{amount} {token}</span></p>}
             {recipient && <p>To: <span className="font-bold text-foreground">{recipient}</span></p>}
             {gas && <p>Est. Gas: <span className="font-bold text-foreground">{gas} {token || 'AVAX'}</span></p>}
+            {protocol && protocol !== 'SameChain' && <p>Protocol: <span className="font-bold text-foreground">{protocol}</span></p>}
             {!amount && !recipient && <p className="text-muted-foreground">No transaction details found.</p>}
           </div>
         </CardContent>
@@ -291,3 +288,4 @@ export default function VoiceAuthenticationPage() {
     </Suspense>
   );
 }
+

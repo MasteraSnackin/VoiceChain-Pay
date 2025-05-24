@@ -95,7 +95,7 @@ export default function VoxChainPayPage() {
         setMicStatusText('Error processing command. Try again.');
       } else {
         setParsedIntent(result);
-        toast({ title: "Intent Parsed", description: `Action: ${result.intent}`, variant: "default" });
+        toast({ title: "Intent Parsed", description: `Action: ${result.intent}, Protocol: ${result.suggestedProtocol || 'N/A'}`, variant: "default" });
         setMicStatusText('Command processed! Review details below.');
       }
     } catch (e) {
@@ -111,7 +111,7 @@ export default function VoxChainPayPage() {
         }
       }, 3000);
     }
-  }, [toast, setVoiceCommand, setIsProcessingVoice, setMicStatusText, setParsedIntent, setIntentError, setTransactionStatus, setTransactionMessage, setCurrentTranscript]);
+  }, [toast]); // Removed dependencies that were causing stale closures or excessive re-renders. State refs handle current values.
 
 
   useEffect(() => {
@@ -144,11 +144,11 @@ export default function VoxChainPayPage() {
         }
       }
       const newTranscript = finalTranscript || interimTranscript;
-      setCurrentTranscript(newTranscript); // For UI display
+      setCurrentTranscript(newTranscript); 
     };
 
     recognition.onend = () => {
-      setIsRecording(false);
+      setIsRecording(false); // isRecordingRef will be updated by its own useEffect
       const commandToProcess = currentTranscriptRef.current.trim();
       if (commandToProcess && !isProcessingVoiceRef.current) { 
         handleVoiceCommandSubmit(commandToProcess);
@@ -172,7 +172,7 @@ export default function VoxChainPayPage() {
         description: errorMsg,
         variant: "destructive",
       });
-      setIsRecording(false);
+      setIsRecording(false); // isRecordingRef will be updated
       setMicStatusText('Tap mic to start voice command');
       setCurrentTranscript('');
     };
@@ -186,7 +186,7 @@ export default function VoxChainPayPage() {
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [speechApiSupported, toast, handleVoiceCommandSubmit]); // handleVoiceCommandSubmit is stable
+  }, [speechApiSupported, toast, handleVoiceCommandSubmit]); 
 
   const handleToggleRecording = useCallback(() => {
     if (!speechApiSupported || !recognitionRef.current) {
@@ -198,9 +198,8 @@ export default function VoxChainPayPage() {
       return;
     }
 
-    if (isRecordingRef.current) {
+    if (isRecordingRef.current) { // Use ref for current state
       recognitionRef.current.stop(); 
-      // onend will handle setIsRecording(false) and subsequent logic
     } else {
       setCurrentTranscript(''); 
       setVoiceCommand(''); 
@@ -208,7 +207,7 @@ export default function VoxChainPayPage() {
       setIntentError(null);
       try {
         recognitionRef.current.start();
-        setIsRecording(true);
+        setIsRecording(true); // This will trigger isRecordingRef update
         setMicStatusText('Listening...');
       } catch (e) {
          console.error("Error starting speech recognition", e);
@@ -217,11 +216,11 @@ export default function VoxChainPayPage() {
           description: "Failed to start. Check microphone permissions and refresh.",
           variant: "destructive",
         });
-        setIsRecording(false);
+        setIsRecording(false); // This will trigger isRecordingRef update
         setMicStatusText('Tap mic to start voice command');
       }
     }
-  }, [speechApiSupported, toast, setCurrentTranscript, setVoiceCommand, setParsedIntent, setIntentError, setIsRecording, setMicStatusText]);
+  }, [speechApiSupported, toast]); // Dependencies are stable
 
   const handleExampleCommand = (command: string) => {
     setCurrentTranscript(command); 
@@ -255,7 +254,8 @@ export default function VoxChainPayPage() {
     if (parsedIntent.amount) queryParams.set('amount', parsedIntent.amount.toString());
     if (parsedIntent.recipientAddress) queryParams.set('recipient', parsedIntent.recipientAddress);
     if (parsedIntent.token) queryParams.set('token', parsedIntent.token);
-    queryParams.set('gas', '0.001'); 
+    if (parsedIntent.suggestedProtocol) queryParams.set('protocol', parsedIntent.suggestedProtocol);
+    queryParams.set('gas', '0.001'); // Mock gas
 
     router.push(`/auth/voice?${queryParams.toString()}`);
   };
@@ -337,10 +337,18 @@ export default function VoxChainPayPage() {
           <Button 
             variant="outline" 
             className="w-full justify-start text-left h-auto py-3 shadow-sm hover:shadow-md transition-shadow bg-card hover:bg-muted/50 border-border text-card-foreground hover:text-accent-foreground" 
-            onClick={() => handleExampleCommand("Pay 100 USDC to coffee-shop.avax")}
+            onClick={() => handleExampleCommand("Pay 100 USDC to coffee-shop.avax on Ethereum")}
             disabled={isProcessingVoice || isRecording}
           >
-            "Pay 100 USDC to coffee-shop.avax"
+            "Pay 100 USDC to coffee-shop.avax on Ethereum"
+          </Button>
+           <Button 
+            variant="outline" 
+            className="w-full justify-start text-left h-auto py-3 shadow-sm hover:shadow-md transition-shadow bg-card hover:bg-muted/50 border-border text-card-foreground hover:text-accent-foreground" 
+            onClick={() => handleExampleCommand("Send 10 AVAX to Bob on DFK Subnet")}
+            disabled={isProcessingVoice || isRecording}
+          >
+            "Send 10 AVAX to Bob on DFK Subnet"
           </Button>
         </div>
       </section>
@@ -416,3 +424,4 @@ export default function VoxChainPayPage() {
     </div>
   );
 }
+
