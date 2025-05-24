@@ -25,8 +25,8 @@ declare global {
     results: SpeechRecognitionResultList;
     resultIndex: number;
   }
-  interface SpeechRecognitionErrorEvent extends Event { 
-    error: string; 
+  interface SpeechRecognitionErrorEvent extends Event {
+    error: string;
     message: string;
   }
 }
@@ -34,25 +34,25 @@ declare global {
 
 export default function VoxChainPayPage() {
   const router = useRouter();
-  const [voiceCommand, setVoiceCommand] = useState<string>(''); 
+  const [voiceCommand, setVoiceCommand] = useState<string>('');
   const [parsedIntent, setParsedIntent] = useState<ParseTransactionIntentOutput | null>(null);
   const [intentError, setIntentError] = useState<string | null>(null);
-  
-  const [isProcessingVoice, setIsProcessingVoice] = useState<boolean>(false); 
+
+  const [isProcessingVoice, setIsProcessingVoice] = useState<boolean>(false);
   const [isProcessingTransaction, setIsProcessingTransaction] = useState<boolean>(false);
-  
+
   const [transactionStatus, setTransactionStatus] = useState<TransactionStatus>('idle');
   const [transactionMessage, setTransactionMessage] = useState<string | null>(null);
-  
+
   const [connectedWalletAddress, setConnectedWalletAddress] = useState<string | null>(null);
-  
+
   const { toast } = useToast();
 
   const [isRecording, setIsRecording] = useState<boolean>(false);
-  const [currentTranscript, setCurrentTranscript] = useState<string>(''); 
+  const [currentTranscript, setCurrentTranscript] = useState<string>('');
   const [micStatusText, setMicStatusText] = useState<string>('Tap mic to start voice command');
   const [speechApiSupported, setSpeechApiSupported] = useState<boolean>(true);
-  
+
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const currentTranscriptRef = useRef(currentTranscript);
   const isProcessingVoiceRef = useRef(isProcessingVoice);
@@ -74,7 +74,7 @@ export default function VoxChainPayPage() {
     if (!commandToProcess.trim()) {
       if (!isProcessingVoiceRef.current) {
           setMicStatusText('Tap mic to start voice command');
-          setCurrentTranscript(''); 
+          setCurrentTranscript('');
       }
       return;
     }
@@ -111,7 +111,7 @@ export default function VoxChainPayPage() {
         }
       }, 3000);
     }
-  }, [toast]); // Removed dependencies that were causing stale closures or excessive re-renders. State refs handle current values.
+  }, [toast]);
 
 
   useEffect(() => {
@@ -126,11 +126,11 @@ export default function VoxChainPayPage() {
       });
       return;
     }
-    
+
     recognitionRef.current = new SpeechRecognitionAPI();
     const recognition = recognitionRef.current!;
-    recognition.continuous = false; 
-    recognition.interimResults = true; 
+    recognition.continuous = false;
+    recognition.interimResults = true;
     recognition.lang = 'en-US';
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
@@ -144,13 +144,13 @@ export default function VoxChainPayPage() {
         }
       }
       const newTranscript = finalTranscript || interimTranscript;
-      setCurrentTranscript(newTranscript); 
+      setCurrentTranscript(newTranscript);
     };
 
     recognition.onend = () => {
-      setIsRecording(false); // isRecordingRef will be updated by its own useEffect
+      setIsRecording(false);
       const commandToProcess = currentTranscriptRef.current.trim();
-      if (commandToProcess && !isProcessingVoiceRef.current) { 
+      if (commandToProcess && !isProcessingVoiceRef.current) {
         handleVoiceCommandSubmit(commandToProcess);
       } else if (!isProcessingVoiceRef.current) {
         setMicStatusText('Tap mic to start voice command');
@@ -172,11 +172,11 @@ export default function VoxChainPayPage() {
         description: errorMsg,
         variant: "destructive",
       });
-      setIsRecording(false); // isRecordingRef will be updated
+      setIsRecording(false);
       setMicStatusText('Tap mic to start voice command');
       setCurrentTranscript('');
     };
-    
+
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.onresult = null;
@@ -186,7 +186,7 @@ export default function VoxChainPayPage() {
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [speechApiSupported, toast, handleVoiceCommandSubmit]); 
+  }, [speechApiSupported, toast, handleVoiceCommandSubmit]);
 
   const handleToggleRecording = useCallback(() => {
     if (!speechApiSupported || !recognitionRef.current) {
@@ -198,16 +198,16 @@ export default function VoxChainPayPage() {
       return;
     }
 
-    if (isRecordingRef.current) { // Use ref for current state
-      recognitionRef.current.stop(); 
+    if (isRecordingRef.current) { 
+      recognitionRef.current.stop();
     } else {
-      setCurrentTranscript(''); 
-      setVoiceCommand(''); 
-      setParsedIntent(null); 
+      setCurrentTranscript('');
+      setVoiceCommand('');
+      setParsedIntent(null);
       setIntentError(null);
       try {
         recognitionRef.current.start();
-        setIsRecording(true); // This will trigger isRecordingRef update
+        setIsRecording(true); 
         setMicStatusText('Listening...');
       } catch (e) {
          console.error("Error starting speech recognition", e);
@@ -216,14 +216,14 @@ export default function VoxChainPayPage() {
           description: "Failed to start. Check microphone permissions and refresh.",
           variant: "destructive",
         });
-        setIsRecording(false); // This will trigger isRecordingRef update
+        setIsRecording(false); 
         setMicStatusText('Tap mic to start voice command');
       }
     }
-  }, [speechApiSupported, toast]); // Dependencies are stable
+  }, [speechApiSupported, toast]);
 
   const handleExampleCommand = (command: string) => {
-    setCurrentTranscript(command); 
+    setCurrentTranscript(command);
     handleVoiceCommandSubmit(command);
   };
 
@@ -249,17 +249,18 @@ export default function VoxChainPayPage() {
     }
 
     setIsProcessingTransaction(true);
-    
+
     const queryParams = new URLSearchParams();
     if (parsedIntent.amount) queryParams.set('amount', parsedIntent.amount.toString());
     if (parsedIntent.recipientAddress) queryParams.set('recipient', parsedIntent.recipientAddress);
     if (parsedIntent.token) queryParams.set('token', parsedIntent.token);
+    if (parsedIntent.destinationChain) queryParams.set('destinationChain', parsedIntent.destinationChain);
     if (parsedIntent.suggestedProtocol) queryParams.set('protocol', parsedIntent.suggestedProtocol);
     queryParams.set('gas', '0.001'); // Mock gas
 
     router.push(`/auth/voice?${queryParams.toString()}`);
   };
-  
+
   const canConfirmTransaction = parsedIntent && parsedIntent.intent !== 'unknown' && connectedWalletAddress && !isProcessingTransaction && !isProcessingVoice;
 
   return (
@@ -283,7 +284,7 @@ export default function VoxChainPayPage() {
             {Array.from({ length: 15 }).map((_, i) => (
               <span
                 key={i}
-                className={`h-1.5 w-1.5 rounded-full bg-primary/30 transition-all duration-300 
+                className={`h-1.5 w-1.5 rounded-full bg-primary/30 transition-all duration-300
                             ${isRecording && !isProcessingVoice ? 'animate-pulse bg-primary/70 scale-125' : 'bg-primary/30'}`}
                 style={{ animationDelay: isRecording ? `${i * 100}ms` : '0ms' }}
               />
@@ -293,7 +294,7 @@ export default function VoxChainPayPage() {
           <p className="text-lg text-muted-foreground h-6 min-h-[1.5rem] text-center px-2">
             {micStatusText}
           </p>
-          
+
           {currentTranscript && (isRecording || isProcessingVoice || (voiceCommand && (parsedIntent || intentError))) && (
             <p className="text-center text-sm text-foreground mt-1 italic max-w-xs truncate" title={currentTranscript}>"{currentTranscript}"</p>
           )}
@@ -301,7 +302,7 @@ export default function VoxChainPayPage() {
 
           <Button
             variant="default"
-            size="lg" 
+            size="lg"
             className="rounded-full w-28 h-28 p-0 bg-primary hover:bg-primary/90 shadow-2xl focus:ring-4 focus:ring-primary/50 active:scale-95 transition-transform"
             onClick={handleToggleRecording}
             disabled={isProcessingVoice || !speechApiSupported}
@@ -309,7 +310,7 @@ export default function VoxChainPayPage() {
           >
             {isRecording ? <StopCircle className="h-16 w-16 text-primary-foreground" /> : <Mic className="h-16 w-16 text-primary-foreground" />}
           </Button>
-          
+
           <p className="text-sm text-muted-foreground h-5 min-h-[1.25rem]">
             {isProcessingVoice ? "" : (isRecording ? "Tap mic to stop" : "")}
           </p>
@@ -326,25 +327,25 @@ export default function VoxChainPayPage() {
       <section aria-labelledby="try-saying-section" className="mt-10 max-w-md mx-auto">
         <h3 id="try-saying-section" className="text-lg font-semibold text-center mb-4 text-foreground">Try saying:</h3>
         <div className="space-y-3">
-          <Button 
-            variant="outline" 
-            className="w-full justify-start text-left h-auto py-3 shadow-sm hover:shadow-md transition-shadow bg-card hover:bg-muted/50 border-border text-card-foreground hover:text-accent-foreground" 
+          <Button
+            variant="outline"
+            className="w-full justify-start text-left h-auto py-3 shadow-sm hover:shadow-md transition-shadow bg-card hover:bg-muted/50 border-border text-card-foreground hover:text-accent-foreground"
             onClick={() => handleExampleCommand("Send 0.5 AVAX to Alice")}
             disabled={isProcessingVoice || isRecording}
           >
             "Send 0.5 AVAX to Alice"
           </Button>
-          <Button 
-            variant="outline" 
-            className="w-full justify-start text-left h-auto py-3 shadow-sm hover:shadow-md transition-shadow bg-card hover:bg-muted/50 border-border text-card-foreground hover:text-accent-foreground" 
+          <Button
+            variant="outline"
+            className="w-full justify-start text-left h-auto py-3 shadow-sm hover:shadow-md transition-shadow bg-card hover:bg-muted/50 border-border text-card-foreground hover:text-accent-foreground"
             onClick={() => handleExampleCommand("Pay 100 USDC to coffee-shop.avax on Ethereum")}
             disabled={isProcessingVoice || isRecording}
           >
             "Pay 100 USDC to coffee-shop.avax on Ethereum"
           </Button>
-           <Button 
-            variant="outline" 
-            className="w-full justify-start text-left h-auto py-3 shadow-sm hover:shadow-md transition-shadow bg-card hover:bg-muted/50 border-border text-card-foreground hover:text-accent-foreground" 
+           <Button
+            variant="outline"
+            className="w-full justify-start text-left h-auto py-3 shadow-sm hover:shadow-md transition-shadow bg-card hover:bg-muted/50 border-border text-card-foreground hover:text-accent-foreground"
             onClick={() => handleExampleCommand("Send 10 AVAX to Bob on DFK Subnet")}
             disabled={isProcessingVoice || isRecording}
           >
@@ -352,10 +353,10 @@ export default function VoxChainPayPage() {
           </Button>
         </div>
       </section>
-      
+
       {(parsedIntent || intentError) && <Separator className="my-10" />}
 
-      <div className="space-y-8 mt-2"> 
+      <div className="space-y-8 mt-2">
         {(parsedIntent || intentError) && (
           <section aria-labelledby="transaction-details-section" className="space-y-6">
             <h2 id="transaction-details-section" className="sr-only">Transaction Details</h2>
@@ -365,10 +366,10 @@ export default function VoxChainPayPage() {
 
         <section aria-labelledby="wallet-connect-section" className="space-y-6">
            <h2 id="wallet-connect-section" className="sr-only">Wallet Connection</h2>
-           <WalletConnect 
-            onConnect={handleConnectWallet} 
+           <WalletConnect
+            onConnect={handleConnectWallet}
             onDisconnect={handleDisconnectWallet}
-            connectedAddress={connectedWalletAddress} 
+            connectedAddress={connectedWalletAddress}
           />
         </section>
 
@@ -382,7 +383,7 @@ export default function VoxChainPayPage() {
             </section>
           </>
         )}
-        
+
         {parsedIntent && parsedIntent.intent !== 'unknown' && (
           <>
           <Separator />
@@ -403,8 +404,8 @@ export default function VoxChainPayPage() {
               </p>
             </CardContent>
             <CardFooter>
-              <Button 
-                onClick={handleProceedToVoiceAuth} 
+              <Button
+                onClick={handleProceedToVoiceAuth}
                 disabled={!canConfirmTransaction}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                 size="lg"

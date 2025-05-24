@@ -20,8 +20,8 @@ declare global {
     results: SpeechRecognitionResultList;
     resultIndex: number;
   }
-  interface SpeechRecognitionErrorEvent extends Event { 
-    error: string; 
+  interface SpeechRecognitionErrorEvent extends Event {
+    error: string;
     message: string;
   }
 }
@@ -35,7 +35,7 @@ const VoiceWaveformVisualizer = () => {
       {barHeights.map((height, index) => (
         <div
           key={index}
-          className="w-1.5 bg-primary/70 rounded-full" 
+          className="w-1.5 bg-primary/70 rounded-full"
           style={{ height: `${height}px`, animation: `pulseWave 1s ease-in-out ${index * 0.05}s infinite alternate` }}
         />
       ))}
@@ -60,6 +60,7 @@ function VoiceAuthenticationContent() {
   const [token, setToken] = useState<string | null>(null);
   const [gas, setGas] = useState<string | null>(null);
   const [protocol, setProtocol] = useState<string | null>(null);
+  const [destinationChain, setDestinationChain] = useState<string | null>(null);
 
 
   const [authStatus, setAuthStatus] = useState<AuthStatus>('idle');
@@ -76,6 +77,7 @@ function VoiceAuthenticationContent() {
     setToken(searchParams.get('token'));
     setGas(searchParams.get('gas'));
     setProtocol(searchParams.get('protocol'));
+    setDestinationChain(searchParams.get('destinationChain'));
   }, [searchParams]);
 
   const handleAuthenticationResult = (success: boolean, voiceHash?: string) => {
@@ -84,8 +86,8 @@ function VoiceAuthenticationContent() {
       setStatusTitle('Authenticated!');
       setStatusMessage(`Authenticated successfully! Voice Hash: ${voiceHash?.substring(0,10)}...`);
       toast({ title: 'Authentication Successful', description: 'Transaction authorized. Redirecting to details page...', variant: 'default' });
-      
-      const currentParams = new URLSearchParams(searchParams.toString()); // Carries over all existing params
+
+      const currentParams = new URLSearchParams(searchParams.toString());
       router.push(`/transaction/success?${currentParams.toString()}`);
 
     } else {
@@ -97,7 +99,7 @@ function VoiceAuthenticationContent() {
     setIsRecording(false);
     setCurrentTranscript('');
   };
-  
+
   const processVoiceSample = async (audioDataUri: string) => {
     setAuthStatus('processing');
     setStatusTitle('Verifying Identity');
@@ -127,24 +129,24 @@ function VoiceAuthenticationContent() {
       });
       return;
     }
-    
+
     recognitionRef.current = new SpeechRecognitionAPI();
     const recognition = recognitionRef.current!;
-    recognition.continuous = false; 
-    recognition.interimResults = false; 
+    recognition.continuous = false;
+    recognition.interimResults = false;
     recognition.lang = 'en-US';
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       const transcript = event.results[0][0].transcript;
       setCurrentTranscript(transcript);
-      const pseudoAudioData = btoa(transcript); 
-      const pseudoAudioDataUri = `data:text/plain;base64,${pseudoAudioData}`; 
+      const pseudoAudioData = btoa(transcript);
+      const pseudoAudioDataUri = `data:text/plain;base64,${pseudoAudioData}`;
       processVoiceSample(pseudoAudioDataUri);
     };
 
     recognition.onend = () => {
       setIsRecording(false);
-      if (authStatus === 'recording' && !currentTranscript) { 
+      if (authStatus === 'recording' && !currentTranscript) {
         setAuthStatus('idle');
         setStatusTitle('Authentication Required');
         setStatusMessage('Recording stopped. Click Start Authentication to try again.');
@@ -159,17 +161,17 @@ function VoiceAuthenticationContent() {
       setStatusMessage(`Mic error: ${event.error}. Try again.`);
       toast({ title: "Microphone Error", description: event.message || event.error, variant: "destructive" });
     };
-    
+
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.onresult = null;
         recognitionRef.current.onend = null;
         recognitionRef.current.onerror = null;
-        recognitionRef.current.stop(); 
+        recognitionRef.current.stop();
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authStatus, currentTranscript]); // Keep dependencies minimal but correct
+  }, [authStatus, currentTranscript]); 
 
   const handleStartAuthentication = () => {
     if (!speechApiSupported || !recognitionRef.current) {
@@ -177,12 +179,12 @@ function VoiceAuthenticationContent() {
       return;
     }
     if (isRecording) {
-      recognitionRef.current.stop(); 
+      recognitionRef.current.stop();
     } else {
-      setCurrentTranscript(''); 
+      setCurrentTranscript('');
       setAuthStatus('recording');
       setStatusTitle('Recording...');
-      setStatusMessage('Say the passphrase: "My voice is my password."'); 
+      setStatusMessage('Say the passphrase: "My voice is my password."');
       try {
         recognitionRef.current.start();
         setIsRecording(true);
@@ -202,7 +204,7 @@ function VoiceAuthenticationContent() {
       case 'recording':
         return <Mic className="h-20 w-20 text-primary animate-pulse" />;
       case 'processing':
-        return <Search className="h-20 w-20 text-primary" />; 
+        return <Search className="h-20 w-20 text-primary" />;
       case 'authenticated':
         return <ShieldCheck className="h-20 w-20 text-green-500" />;
       case 'failed':
@@ -221,13 +223,13 @@ function VoiceAuthenticationContent() {
         <CardContent className="flex flex-col items-center space-y-6">
           <div className="relative w-48 h-48 rounded-full bg-background/30 flex items-center justify-center shadow-inner">
             <div className="absolute inset-0 rounded-full border-4 border-primary/50 animate-pulse"></div>
-            <div className="relative z-10 p-6 rounded-full bg-background/50"> 
+            <div className="relative z-10 p-6 rounded-full bg-background/50">
               {getAuthIcon()}
             </div>
           </div>
 
           {authStatus === 'processing' && <VoiceWaveformVisualizer />}
-          
+
           <div className="text-center">
             <p className="text-xl font-semibold text-card-foreground">
               {statusTitle}
@@ -239,8 +241,8 @@ function VoiceAuthenticationContent() {
           </div>
 
           {authStatus !== 'authenticated' && authStatus !== 'processing' && (
-            <Button 
-              onClick={handleStartAuthentication} 
+            <Button
+              onClick={handleStartAuthentication}
               disabled={!speechApiSupported || (authStatus === 'processing' && !isRecording)}
               className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-primary-foreground font-semibold py-3 text-lg rounded-lg shadow-lg transform transition-transform hover:scale-105 active:scale-95"
             >
@@ -250,21 +252,22 @@ function VoiceAuthenticationContent() {
           )}
 
           {(authStatus === 'authenticated' || authStatus === 'failed') && authStatus !== 'processing' && (
-             <Button 
-              onClick={() => router.push('/')} 
-              variant="secondary" 
+             <Button
+              onClick={() => router.push('/')}
+              variant="secondary"
               className="w-full font-semibold py-3 text-lg rounded-lg shadow-lg"
             >
               Return to Dashboard
             </Button>
           )}
 
-          <div className="w-full p-4 bg-muted/30 rounded-lg text-sm space-y-2 border-border"> 
+          <div className="w-full p-4 bg-muted/30 rounded-lg text-sm space-y-2 border-border">
             <h4 className="font-semibold text-card-foreground/80">Transaction to Authorize:</h4>
             {amount && token && <p>Amount: <span className="font-bold text-foreground">{amount} {token}</span></p>}
             {recipient && <p>To: <span className="font-bold text-foreground">{recipient}</span></p>}
-            {gas && <p>Est. Gas: <span className="font-bold text-foreground">{gas} {token || 'AVAX'}</span></p>}
+            {destinationChain && protocol && protocol !== 'SameChain' && <p>Destination: <span className="font-bold text-foreground">{destinationChain}</span></p>}
             {protocol && protocol !== 'SameChain' && <p>Protocol: <span className="font-bold text-foreground">{protocol}</span></p>}
+            {gas && <p>Est. Gas: <span className="font-bold text-foreground">{gas} {token || 'AVAX'}</span></p>}
             {!amount && !recipient && <p className="text-muted-foreground">No transaction details found.</p>}
           </div>
         </CardContent>

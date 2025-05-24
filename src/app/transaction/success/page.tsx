@@ -1,3 +1,4 @@
+
 // src/app/transaction/success/page.tsx
 'use client';
 
@@ -6,7 +7,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Lock, Zap, ArrowLeft, Loader2, Settings2, Network } from 'lucide-react';
+import { CheckCircle, Lock, Zap, ArrowLeft, Loader2, Settings2, Network, LinkIcon } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface DetailRowProps {
@@ -44,6 +45,7 @@ function TransactionSuccessContent() {
   const [token, setToken] = useState<string | null>(null);
   const [gas, setGas] = useState<string | null>(null);
   const [protocol, setProtocol] = useState<string | null>(null);
+  const [destinationChain, setDestinationChain] = useState<string | null>(null);
   const [creationTime, setCreationTime] = useState<string>('');
 
   useEffect(() => {
@@ -51,20 +53,36 @@ function TransactionSuccessContent() {
     setRecipient(searchParams.get('recipient'));
     setToken(searchParams.get('token'));
     setGas(searchParams.get('gas'));
-    setProtocol(searchParams.get('protocol'));
+    const protocolParam = searchParams.get('protocol');
+    setProtocol(protocolParam);
+    if (protocolParam && protocolParam !== 'SameChain') {
+      setDestinationChain(searchParams.get('destinationChain'));
+    }
     setCreationTime(format(new Date(), "dd/MM/yyyy, HH:mm:ss"));
   }, [searchParams]);
 
   const mockTxHash = "0x" + Array(40).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
   const mockBlockNumber = `#${Math.floor(Math.random() * 10000000) + 40000000}`;
   const mockConfirmations = "12/12";
-  const networkName = "Avalanche C-Chain"; // Source Chain
+  const sourceNetworkName = "Avalanche C-Chain";
 
   const isCrossChain = protocol && protocol !== 'SameChain';
-  const successTitle = isCrossChain ? "Cross-Chain Tx Initiated" : "Transaction Successful";
-  const successMessage = isCrossChain 
-    ? `Your ${protocol} transaction to ${recipient || 'recipient'} for ${amount || 'amount'} ${token || ''} has been initiated.`
-    : `Your transaction to ${recipient || 'recipient'} for ${amount || 'amount'} ${token || ''} is complete.`;
+  let successTitle = "Transaction Successful";
+  let successMessage = `Your transaction to ${recipient || 'recipient'} for ${amount || 'amount'} ${token || ''} is complete.`;
+  let protocolDisplayName = protocol;
+  let protocolFooterMessage = "";
+
+  if (protocol === 'CCIP') {
+    successTitle = "Cross-Chain Tx Initiated (CCIP)";
+    successMessage = `Your CCIP transaction to ${recipient || 'recipient'} on ${destinationChain || 'destination'} for ${amount || 'amount'} ${token || ''} has been initiated via Chainlink CCIP.`;
+    protocolFooterMessage = "Powered by Chainlink CCIP";
+    protocolDisplayName = "Chainlink CCIP";
+  } else if (protocol === 'AvalancheTeleporter') {
+    successTitle = "Subnet Tx Initiated (Teleporter)";
+    successMessage = `Your transaction to ${recipient || 'recipient'} on ${destinationChain || 'destination subnet'} for ${amount || 'amount'} ${token || ''} has been initiated via Avalanche Teleporter.`;
+    protocolFooterMessage = "Powered by Avalanche Teleporter (AWM/ICM)";
+    protocolDisplayName = "Avalanche Teleporter";
+  }
 
 
   return (
@@ -83,9 +101,9 @@ function TransactionSuccessContent() {
         <CardContent className="space-y-2">
           <DetailRow label="Amount" value={`${amount || 'N/A'} ${token || ''}`} />
           <DetailRow label="Recipient" value={recipient || 'N/A'} />
-          <DetailRow label="Source Network" value={networkName} isNetwork />
-          {isCrossChain && protocol && <DetailRow label="Cross-Chain Protocol" value={protocol} isProtocol />}
-          {isCrossChain && searchParams.get('destinationChain') && <DetailRow label="Destination Network" value={searchParams.get('destinationChain')!} />}
+          <DetailRow label="Source Network" value={sourceNetworkName} isNetwork />
+          {isCrossChain && destinationChain && <DetailRow label="Destination Network" value={destinationChain} isNetwork />}
+          {isCrossChain && protocolDisplayName && <DetailRow label="Cross-Chain Protocol" value={protocolDisplayName} isProtocol />}
           <DetailRow label="Est. Gas Fee" value={`${gas || '0.001'} ${token || 'AVAX'}`} />
 
           <Card className="bg-card/60 shadow-md mt-3">
@@ -125,10 +143,10 @@ function TransactionSuccessContent() {
           </div>
         </CardContent>
         <CardFooter className="flex-col items-center text-xs text-muted-foreground pt-4 space-y-3">
-          {isCrossChain && (
+          {isCrossChain && protocolFooterMessage && (
             <div className="flex items-center space-x-2 text-center text-xs text-muted-foreground p-2 rounded-md bg-muted/30 w-full justify-center">
-                <Network size={14} className="text-primary" />
-                <span>Powered by CCIP & Avalanche Interoperability</span>
+                {protocol === 'CCIP' ? <LinkIcon size={14} className="text-primary" /> : <Network size={14} className="text-primary" />}
+                <span>{protocolFooterMessage}</span>
             </div>
           )}
           <p>Created: {creationTime}</p>
@@ -149,3 +167,4 @@ export default function TransactionSuccessPage() {
     </Suspense>
   );
 }
+
