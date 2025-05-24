@@ -11,7 +11,7 @@ import { submitVoiceCommand, type SubmitVoiceCommandOutput } from './actions';
 import type { ParseTransactionIntentOutput } from '@/ai/flows/parse-transaction-intent';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
-import { ArrowRight, Zap } from 'lucide-react';
+import { ArrowRight, Zap, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function VoxChainPayPage() {
@@ -172,6 +172,3 @@ export default function VoxChainPayPage() {
     </div>
   );
 }
-
-// Add Loader2 to lucide-react imports if not already present
-// import { ArrowRight, Zap, Loader2 } from 'lucide-react';

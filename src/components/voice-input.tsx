@@ -25,11 +25,14 @@ const VoiceInput: FC<VoiceInputProps> = ({ onCommandSubmit, isProcessing, initia
     }
   };
 
-  // Placeholder for actual voice recording logic
   const handleVoiceRecord = () => {
+    const simulatedCommand = "Simulated voice input: Send 1 AVAX to Bob";
+    setCommand(simulatedCommand);
     // In a real app, this would initiate voice recording.
-    // For now, it could clear the textarea or set a placeholder.
-    setCommand("Simulated voice input: Send 1 AVAX to Bob"); 
+    // For this prototype, we'll directly submit the simulated command.
+    if (!isProcessing) {
+      onCommandSubmit(simulatedCommand);
+    }
   };
 
   return (
@@ -40,7 +43,7 @@ const VoiceInput: FC<VoiceInputProps> = ({ onCommandSubmit, isProcessing, initia
           Voice Command Input
         </CardTitle>
         <CardDescription>
-          Enter your transaction command below or use the microphone (simulation).
+          Enter your transaction command below or use the microphone to use a simulated command.
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
@@ -63,10 +66,10 @@ const VoiceInput: FC<VoiceInputProps> = ({ onCommandSubmit, isProcessing, initia
             onClick={handleVoiceRecord}
             disabled={isProcessing}
             className="w-full sm:w-auto"
-            aria-label="Start Voice Recording (Simulated)"
+            aria-label="Submit Simulated Voice Command"
           >
             <Mic className="mr-2 h-4 w-4" />
-            Record Voice (Simulated)
+            Use Simulated Voice Command
           </Button>
         </CardContent>
         <CardFooter>
@@ -76,7 +79,7 @@ const VoiceInput: FC<VoiceInputProps> = ({ onCommandSubmit, isProcessing, initia
             ) : (
               <Send className="mr-2 h-4 w-4" />
             )}
-            Process Command
+            Process Typed Command
           </Button>
         </CardFooter>
       </form>

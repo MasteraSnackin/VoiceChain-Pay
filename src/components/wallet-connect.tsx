@@ -3,7 +3,7 @@
 
 import type { FC } from 'react';
 import { useState, useEffect } from 'react';
-import { Wallet, LogOut, CheckCircle, Link2Off } from 'lucide-react';
+import { Wallet, LogOut, CheckCircle, Link2Off, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -102,6 +102,3 @@ const WalletConnect: FC<WalletConnectProps> = ({ onConnect, onDisconnect, connec
 };
 
 export default WalletConnect;
-
-// Add Loader2 to lucide-react imports if not already present
-// import { Wallet, LogOut, CheckCircle, Link2Off, Loader2 } from 'lucide-react';
