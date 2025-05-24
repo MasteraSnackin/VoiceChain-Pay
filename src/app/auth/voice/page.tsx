@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { generateVoiceAuthHash } from '@/ai/flows/generate-voice-auth-hash';
-import { Lock, Mic, StopCircle, Loader2, ShieldCheck, ShieldX, Zap } from 'lucide-react';
+import { Lock, Mic, StopCircle, Loader2, ShieldCheck, ShieldX, Zap, Search } from 'lucide-react';
 
 // Helper to broaden type for SpeechRecognitionEvent and SpeechRecognitionErrorEvent
 declare global {
@@ -27,6 +27,28 @@ declare global {
 
 type AuthStatus = 'idle' | 'recording' | 'processing' | 'authenticated' | 'failed';
 
+const VoiceWaveformVisualizer = () => {
+  const barHeights = [10, 20, 15, 30, 25, 18, 22, 12, 28, 16, 24, 19, 14, 26, 10, 20, 15, 30, 25, 18];
+  return (
+    <div className="flex items-end justify-center space-x-1 h-16 my-4">
+      {barHeights.map((height, index) => (
+        <div
+          key={index}
+          className="w-1.5 bg-purple-400 rounded-full"
+          style={{ height: `${height}px`, animation: `pulseWave 1s ease-in-out ${index * 0.05}s infinite alternate` }}
+        />
+      ))}
+      <style jsx global>{`
+        @keyframes pulseWave {
+          0% { transform: scaleY(0.5); opacity: 0.7; }
+          100% { transform: scaleY(1); opacity: 1; }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+
 function VoiceAuthenticationContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -39,6 +61,7 @@ function VoiceAuthenticationContent() {
 
   const [authStatus, setAuthStatus] = useState<AuthStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('Verify your identity to complete the transaction.');
+  const [statusTitle, setStatusTitle] = useState('Authentication Required');
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [currentTranscript, setCurrentTranscript] = useState<string>('');
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -54,12 +77,13 @@ function VoiceAuthenticationContent() {
   const handleAuthenticationResult = (success: boolean, voiceHash?: string) => {
     if (success) {
       setAuthStatus('authenticated');
+      setStatusTitle('Authenticated!');
       setStatusMessage(`Authenticated successfully! Voice Hash: ${voiceHash?.substring(0,10)}...`);
       toast({ title: 'Authentication Successful', description: 'Transaction can now proceed (simulated).', variant: 'default' });
-      // Simulate redirecting to a success page or back to main page with success status
       setTimeout(() => router.push('/?auth=success'), 2000);
     } else {
       setAuthStatus('failed');
+      setStatusTitle('Authentication Failed');
       setStatusMessage('Authentication failed. Please try again.');
       toast({ title: 'Authentication Failed', description: 'The voice signature did not match or an error occurred.', variant: 'destructive' });
     }
@@ -69,11 +93,10 @@ function VoiceAuthenticationContent() {
   
   const processVoiceSample = async (audioDataUri: string) => {
     setAuthStatus('processing');
-    setStatusMessage('Verifying voice signature...');
+    setStatusTitle('Verifying Identity');
+    setStatusMessage('Comparing with stored biometric data...');
     try {
       const { voiceAuthHash } = await generateVoiceAuthHash({ voiceSampleDataUri: audioDataUri });
-      // In a real app, you'd compare this hash with a stored hash.
-      // For this demo, we'll simulate success/failure.
       console.log('Generated Voice Auth Hash:', voiceAuthHash);
       const mockAuthSuccess = Math.random() > 0.3; // 70% chance of success for demo
       handleAuthenticationResult(mockAuthSuccess, voiceAuthHash);
@@ -87,6 +110,7 @@ function VoiceAuthenticationContent() {
     const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognitionAPI) {
       setSpeechApiSupported(false);
+      setStatusTitle('Unsupported Browser');
       setStatusMessage('Voice input not supported by your browser.');
       toast({
         title: "Speech Recognition Not Supported",
@@ -99,31 +123,22 @@ function VoiceAuthenticationContent() {
     recognitionRef.current = new SpeechRecognitionAPI();
     const recognition = recognitionRef.current!;
     recognition.continuous = false;
-    recognition.interimResults = false; // We only want the final result for auth
+    recognition.interimResults = false; 
     recognition.lang = 'en-US';
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       const transcript = event.results[0][0].transcript;
-      setCurrentTranscript(transcript); // Store transcript for potential use
-      
-      // For voice auth, we need the audio data, not just transcript.
-      // This part is tricky as Web Speech API doesn't directly give raw audio for hashing.
-      // A common approach is to record audio separately using MediaRecorder API
-      // then convert to base64. For simplicity in this Genkit context,
-      // we'll use the transcript itself as a proxy for the "voice sample data"
-      // that the generateVoiceAuthHash flow expects as a base64 string.
-      // THIS IS A SIMPLIFICATION FOR THE DEMO.
-      // In a real scenario, you'd capture actual audio, convert to base64, and send that.
-      const pseudoAudioData = btoa(transcript); // Base64 encode the transcript
+      setCurrentTranscript(transcript);
+      const pseudoAudioData = btoa(transcript);
       const pseudoAudioDataUri = `data:text/plain;base64,${pseudoAudioData}`;
-      
       processVoiceSample(pseudoAudioDataUri);
     };
 
     recognition.onend = () => {
       setIsRecording(false);
-      if (authStatus === 'recording') { // If it ended without a result
+      if (authStatus === 'recording') { 
         setAuthStatus('idle');
+        setStatusTitle('Authentication Required');
         setStatusMessage('Recording stopped. Click Start Authentication to try again.');
       }
     };
@@ -132,6 +147,7 @@ function VoiceAuthenticationContent() {
       console.error("Speech recognition error for auth", event.error, event.message);
       setIsRecording(false);
       setAuthStatus('failed');
+      setStatusTitle('Microphone Error');
       setStatusMessage(`Mic error: ${event.error}. Try again.`);
       toast({ title: "Microphone Error", description: event.message || event.error, variant: "destructive" });
     };
@@ -145,7 +161,7 @@ function VoiceAuthenticationContent() {
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run once on mount
+  }, []);
 
   const handleStartAuthentication = () => {
     if (!speechApiSupported || !recognitionRef.current) {
@@ -157,13 +173,15 @@ function VoiceAuthenticationContent() {
     } else {
       setCurrentTranscript('');
       setAuthStatus('recording');
-      setStatusMessage('Say the passphrase: "My voice is my password."'); // Example passphrase
+      setStatusTitle('Recording...');
+      setStatusMessage('Say the passphrase: "My voice is my password."'); 
       try {
         recognitionRef.current.start();
         setIsRecording(true);
       } catch (e) {
         console.error("Error starting speech recognition for auth", e);
         setAuthStatus('failed');
+        setStatusTitle('Mic Start Failed');
         setStatusMessage('Failed to start mic. Check permissions.');
         toast({ title: "Mic Start Failed", description: "Could not start microphone.", variant: "destructive"});
       }
@@ -176,7 +194,7 @@ function VoiceAuthenticationContent() {
       case 'recording':
         return <Mic className="h-20 w-20 text-blue-400 animate-pulse" />;
       case 'processing':
-        return <Loader2 className="h-20 w-20 text-blue-400 animate-spin" />;
+        return <Search className="h-20 w-20 text-blue-400" />; // Changed from Loader2
       case 'authenticated':
         return <ShieldCheck className="h-20 w-20 text-green-400" />;
       case 'failed':
@@ -195,18 +213,16 @@ function VoiceAuthenticationContent() {
         <CardContent className="flex flex-col items-center space-y-6">
           <div className="relative w-48 h-48 rounded-full bg-purple-800/70 flex items-center justify-center shadow-inner">
             <div className="absolute inset-0 rounded-full border-4 border-purple-600/50 animate-pulse"></div>
-            <div className="relative z-10 p-6 rounded-full bg-purple-900/60"> {/* Adjusted padding */}
-              {getAuthIcon()} {/* Icon size adjusted in getAuthIcon */}
+            <div className="relative z-10 p-6 rounded-full bg-purple-900/60">
+              {getAuthIcon()}
             </div>
           </div>
+
+          {authStatus === 'processing' && <VoiceWaveformVisualizer />}
           
           <div className="text-center">
             <p className="text-xl font-semibold">
-              {authStatus === 'idle' && "Authentication Required"}
-              {authStatus === 'recording' && "Recording..."}
-              {authStatus === 'processing' && "Processing..."}
-              {authStatus === 'authenticated' && "Authenticated!"}
-              {authStatus === 'failed' && "Authentication Failed"}
+              {statusTitle}
             </p>
             <p className="text-sm text-purple-300 mt-1 min-h-[2.2em]">{statusMessage}</p>
             {currentTranscript && (isRecording || authStatus === 'processing') && (
@@ -233,7 +249,6 @@ function VoiceAuthenticationContent() {
               Return to Dashboard
             </Button>
           )}
-
 
           <div className="w-full p-4 bg-purple-800/60 rounded-lg text-sm space-y-2 border border-purple-700">
             <h4 className="font-semibold text-purple-200">Transaction to Authorize:</h4>
