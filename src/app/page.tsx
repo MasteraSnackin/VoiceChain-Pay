@@ -12,7 +12,7 @@ import { submitVoiceCommand, type SubmitVoiceCommandOutput } from './actions';
 import type { ParseTransactionIntentOutput } from '@/ai/flows/parse-transaction-intent';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
-import { ArrowRight, Zap, Loader2, Mic, StopCircle, Info, Voicemail } from 'lucide-react';
+import { ArrowRight, Zap, Loader2, Mic, StopCircle, Info, Voicemail, MessageSquareText } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
 // Helper to broaden type for SpeechRecognitionEvent and SpeechRecognitionErrorEvent
@@ -256,6 +256,7 @@ export default function VoxChainPayPage() {
     if (parsedIntent.token) queryParams.set('token', parsedIntent.token);
     if (parsedIntent.destinationChain) queryParams.set('destinationChain', parsedIntent.destinationChain);
     if (parsedIntent.suggestedProtocol) queryParams.set('protocol', parsedIntent.suggestedProtocol);
+    if (parsedIntent.recipientType) queryParams.set('recipientType', parsedIntent.recipientType);
     queryParams.set('gas', '0.001'); // Mock gas
 
     router.push(`/auth/voice?${queryParams.toString()}`);
@@ -314,15 +315,23 @@ export default function VoxChainPayPage() {
           <p className="text-sm text-muted-foreground h-5 min-h-[1.25rem]">
             {isProcessingVoice ? "" : (isRecording ? "Tap mic to stop" : "")}
           </p>
-
-            {voiceCommand && (parsedIntent || intentError) && !isProcessingVoice && (
-                <div className="w-full mt-4 p-4 bg-muted/50 rounded-lg border border-border text-center">
-                    <p className="text-sm font-medium text-card-foreground mb-1">Recognized Command:</p>
-                    <p className="text-md text-muted-foreground italic">"{voiceCommand}"</p>
-                </div>
-            )}
         </CardContent>
       </Card>
+      
+      {voiceCommand && (parsedIntent || intentError) && !isProcessingVoice && (
+        <Card className="w-full max-w-md mx-auto mt-6 text-center shadow-md">
+            <CardHeader className="pb-2 pt-4">
+                <CardTitle className="text-xl flex items-center justify-center gap-2 text-card-foreground">
+                    <MessageSquareText className="h-5 w-5 text-primary" /> 
+                    Recognized Command
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="pb-4">
+                <p className="text-lg text-muted-foreground italic">"{voiceCommand}"</p>
+            </CardContent>
+        </Card>
+      )}
+
 
       <section aria-labelledby="try-saying-section" className="mt-10 max-w-md mx-auto">
         <h3 id="try-saying-section" className="text-lg font-semibold text-center mb-4 text-foreground">Try saying:</h3>
@@ -425,4 +434,3 @@ export default function VoxChainPayPage() {
     </div>
   );
 }
-

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { generateVoiceAuthHash } from '@/ai/flows/generate-voice-auth-hash';
-import { Lock, Mic, StopCircle, Loader2, ShieldCheck, ShieldX, Zap, Search } from 'lucide-react';
+import { Lock, Mic, StopCircle, Loader2, ShieldCheck, ShieldX, Zap, Search, UserCheck, FileJson, HelpCircle, Coins, MapPin, NetworkIcon, Fuel } from 'lucide-react';
 
 // Helper to broaden type for SpeechRecognitionEvent and SpeechRecognitionErrorEvent
 declare global {
@@ -26,6 +26,7 @@ declare global {
   }
 }
 
+type RecipientType = 'EOA' | 'SmartContract' | 'Unknown' | null;
 type AuthStatus = 'idle' | 'recording' | 'processing' | 'authenticated' | 'failed';
 
 const VoiceWaveformVisualizer = () => {
@@ -49,6 +50,36 @@ const VoiceWaveformVisualizer = () => {
   );
 };
 
+const DetailItem: React.FC<{icon: React.ElementType, label: string, value: string | null | undefined}> = ({ icon: Icon, label, value }) => {
+  if (!value) return null;
+  return (
+    <div className="flex justify-between items-center py-2 px-3 bg-background/30 rounded-md my-1.5">
+      <div className="flex items-center">
+        <Icon className="h-4 w-4 mr-2 text-primary/80" />
+        <span className="text-muted-foreground text-sm">{label}:</span>
+      </div>
+      <span className="font-semibold text-foreground text-sm text-right break-all">{value}</span>
+    </div>
+  );
+};
+
+const RecipientTypeItem: React.FC<{recipientTypeVal: RecipientType | null}> = ({ recipientTypeVal }) => {
+  if (!recipientTypeVal || recipientTypeVal === 'Unknown') return null;
+  let Icon = HelpCircle;
+  if (recipientTypeVal === 'EOA') Icon = UserCheck;
+  else if (recipientTypeVal === 'SmartContract') Icon = FileJson;
+  
+  return (
+     <div className="flex justify-between items-center py-2 px-3 bg-background/30 rounded-md my-1.5">
+      <div className="flex items-center">
+        <Icon className="h-4 w-4 mr-2 text-primary/80" />
+        <span className="text-muted-foreground text-sm">Recipient Type:</span>
+      </div>
+      <span className="font-semibold text-foreground text-sm">{recipientTypeVal}</span>
+    </div>
+  );
+};
+
 
 function VoiceAuthenticationContent() {
   const searchParams = useSearchParams();
@@ -57,6 +88,7 @@ function VoiceAuthenticationContent() {
 
   const [amount, setAmount] = useState<string | null>(null);
   const [recipient, setRecipient] = useState<string | null>(null);
+  const [recipientType, setRecipientType] = useState<RecipientType | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [gas, setGas] = useState<string | null>(null);
   const [protocol, setProtocol] = useState<string | null>(null);
@@ -74,6 +106,7 @@ function VoiceAuthenticationContent() {
   useEffect(() => {
     setAmount(searchParams.get('amount'));
     setRecipient(searchParams.get('recipient'));
+    setRecipientType(searchParams.get('recipientType') as RecipientType);
     setToken(searchParams.get('token'));
     setGas(searchParams.get('gas'));
     setProtocol(searchParams.get('protocol'));
@@ -88,6 +121,8 @@ function VoiceAuthenticationContent() {
       toast({ title: 'Authentication Successful', description: 'Transaction authorized. Redirecting to details page...', variant: 'default' });
 
       const currentParams = new URLSearchParams(searchParams.toString());
+      // Ensure all relevant params are passed, especially recipientType
+      if (recipientType) currentParams.set('recipientType', recipientType);
       router.push(`/transaction/success?${currentParams.toString()}`);
 
     } else {
@@ -261,14 +296,15 @@ function VoiceAuthenticationContent() {
             </Button>
           )}
 
-          <div className="w-full p-4 bg-muted/30 rounded-lg text-sm space-y-2 border-border">
-            <h4 className="font-semibold text-card-foreground/80">Transaction to Authorize:</h4>
-            {amount && token && <p>Amount: <span className="font-bold text-foreground">{amount} {token}</span></p>}
-            {recipient && <p>To: <span className="font-bold text-foreground">{recipient}</span></p>}
-            {destinationChain && protocol && protocol !== 'SameChain' && <p>Destination: <span className="font-bold text-foreground">{destinationChain}</span></p>}
-            {protocol && protocol !== 'SameChain' && <p>Protocol: <span className="font-bold text-foreground">{protocol}</span></p>}
-            {gas && <p>Est. Gas: <span className="font-bold text-foreground">{gas} {token || 'AVAX'}</span></p>}
-            {!amount && !recipient && <p className="text-muted-foreground">No transaction details found.</p>}
+          <div className="w-full p-4 bg-muted/30 rounded-lg text-sm space-y-1 border border-border shadow-inner">
+            <h4 className="font-semibold text-card-foreground/90 mb-2 text-md">Transaction to Authorize:</h4>
+            <DetailItem icon={Coins} label="Amount" value={amount && token ? `${amount} ${token}` : undefined} />
+            <DetailItem icon={UserCheck} label="To" value={recipient} />
+            <RecipientTypeItem recipientTypeVal={recipientType} />
+            <DetailItem icon={MapPin} label="Destination" value={destinationChain && protocol && protocol !== 'SameChain' ? destinationChain : undefined} />
+            <DetailItem icon={NetworkIcon} label="Protocol" value={protocol && protocol !== 'SameChain' ? protocol : undefined} />
+            <DetailItem icon={Fuel} label="Est. Gas" value={gas && token ? `${gas} ${token}` : (gas ? `${gas} AVAX` : undefined)} />
+            {!amount && !recipient && <p className="text-muted-foreground text-center py-2">No transaction details found.</p>}
           </div>
         </CardContent>
         <CardFooter className="text-center flex-col space-y-2 pt-6 pb-4 text-xs text-muted-foreground">
@@ -291,4 +327,3 @@ export default function VoiceAuthenticationPage() {
     </Suspense>
   );
 }
-
