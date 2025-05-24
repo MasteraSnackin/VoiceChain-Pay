@@ -2,12 +2,13 @@
 'use client';
 
 import type { FC } from 'react';
-import { useState } from 'react';
-import { Mic, Send, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Mic, Send, Loader2, StopCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 
 interface VoiceInputProps {
   onCommandSubmit: (command: string) => void;
@@ -17,21 +18,100 @@ interface VoiceInputProps {
 
 const VoiceInput: FC<VoiceInputProps> = ({ onCommandSubmit, isProcessing, initialCommand = "" }) => {
   const [command, setCommand] = useState<string>(initialCommand);
+  const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [speechApiSupported, setSpeechApiSupported] = useState<boolean>(true);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (command.trim() && !isProcessing) {
-      onCommandSubmit(command.trim());
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setSpeechApiSupported(false);
+      toast({
+        title: "Speech Recognition Not Supported",
+        description: "Your browser does not support the Web Speech API. Please type your commands.",
+        variant: "destructive",
+      });
+    }
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, [toast]);
+
+  const handleToggleRecording = () => {
+    if (!speechApiSupported) {
+      toast({
+        title: "Cannot Record",
+        description: "Speech recognition is not supported in your browser.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return; // Should be caught by useEffect, but as a safeguard
+
+    if (isRecording) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsRecording(false);
+    } else {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = 'en-US';
+
+      recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
+        const transcript = event.results[event.results.length - 1][0].transcript.trim();
+        setCommand(transcript);
+        onCommandSubmit(transcript); // Automatically submit after successful recognition
+      };
+
+      recognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => {
+        console.error("Speech recognition error", event.error);
+        let errorMsg = "An error occurred during speech recognition.";
+        if (event.error === 'no-speech') {
+          errorMsg = "No speech was detected. Please try again.";
+        } else if (event.error === 'audio-capture') {
+          errorMsg = "Audio capture failed. Ensure microphone is enabled and working.";
+        } else if (event.error === 'not-allowed') {
+          errorMsg = "Microphone access denied. Please allow microphone access in your browser settings.";
+        }
+        toast({
+          title: "Speech Recognition Error",
+          description: errorMsg,
+          variant: "destructive",
+        });
+        setIsRecording(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsRecording(false);
+      };
+
+      try {
+        recognitionRef.current.start();
+        setIsRecording(true);
+        toast({ title: "Recording Started", description: "Speak your command." });
+      } catch (e) {
+         console.error("Error starting speech recognition", e);
+         toast({
+          title: "Could Not Start Recording",
+          description: "Failed to start speech recognition. Check microphone permissions.",
+          variant: "destructive",
+        });
+        setIsRecording(false);
+      }
     }
   };
 
-  const handleVoiceRecord = () => {
-    const simulatedCommand = "Simulated voice input: Send 1 AVAX to Bob";
-    setCommand(simulatedCommand);
-    // In a real app, this would initiate voice recording.
-    // For this prototype, we'll directly submit the simulated command.
-    if (!isProcessing) {
-      onCommandSubmit(simulatedCommand);
+  const handleSubmitTypedCommand = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (command.trim() && !isProcessing && !isRecording) {
+      onCommandSubmit(command.trim());
     }
   };
 
@@ -43,10 +123,12 @@ const VoiceInput: FC<VoiceInputProps> = ({ onCommandSubmit, isProcessing, initia
           Voice Command Input
         </CardTitle>
         <CardDescription>
-          Enter your transaction command below or use the microphone to use a simulated command.
+          {speechApiSupported 
+            ? "Click 'Start Recording' or type your command below." 
+            : "Speech input not supported. Please type your command."}
         </CardDescription>
       </CardHeader>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmitTypedCommand}>
         <CardContent className="space-y-4">
           <div>
             <Label htmlFor="voice-command-input" className="sr-only">Voice Command</Label>
@@ -56,24 +138,38 @@ const VoiceInput: FC<VoiceInputProps> = ({ onCommandSubmit, isProcessing, initia
               value={command}
               onChange={(e) => setCommand(e.target.value)}
               rows={3}
-              disabled={isProcessing}
+              disabled={isProcessing || isRecording}
               className="resize-none bg-input text-input-foreground placeholder:text-muted-foreground"
             />
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleVoiceRecord}
-            disabled={isProcessing}
-            className="w-full sm:w-auto"
-            aria-label="Submit Simulated Voice Command"
-          >
-            <Mic className="mr-2 h-4 w-4" />
-            Use Simulated Voice Command
-          </Button>
+          {speechApiSupported && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleToggleRecording}
+              disabled={isProcessing || !speechApiSupported}
+              className="w-full sm:w-auto"
+              aria-label={isRecording ? "Stop Recording Voice Command" : "Start Recording Voice Command"}
+            >
+              {isRecording ? (
+                <>
+                  <StopCircle className="mr-2 h-4 w-4 text-red-500" />
+                  Stop Recording
+                </>
+              ) : (
+                <>
+                  <Mic className="mr-2 h-4 w-4" />
+                  Start Recording
+                </>
+              )}
+            </Button>
+          )}
+           {!speechApiSupported && (
+            <p className="text-sm text-destructive">Live voice input is not supported by your browser.</p>
+          )}
         </CardContent>
         <CardFooter>
-          <Button type="submit" disabled={isProcessing || !command.trim()} className="w-full">
+          <Button type="submit" disabled={isProcessing || isRecording || !command.trim()} className="w-full">
             {isProcessing ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
