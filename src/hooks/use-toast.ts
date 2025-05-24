@@ -1,3 +1,4 @@
+
 "use client"
 
 // Inspired by react-hot-toast library
@@ -74,6 +75,11 @@ const addToRemoveQueue = (toastId: string) => {
   toastTimeouts.set(toastId, timeout)
 }
 
+// This is the shared state.
+let memoryState: State = { toasts: [] }
+
+const listeners: Array<(state: State) => void> = []
+
 export const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "ADD_TOAST":
@@ -93,8 +99,6 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {
@@ -128,10 +132,6 @@ export const reducer = (state: State, action: Action): State => {
       }
   }
 }
-
-const listeners: Array<(state: State) => void> = []
-
-let memoryState: State = { toasts: [] }
 
 function dispatch(action: Action) {
   memoryState = reducer(memoryState, action)
@@ -172,23 +172,38 @@ function toast({ ...props }: Toast) {
 }
 
 function useToast() {
-  const [state, setState] = React.useState<State>(memoryState)
+  const [currentMemoryState, setCurrentMemoryState] = React.useState<State>(memoryState);
+  const [isMounted, setIsMounted] = React.useState(false);
 
   React.useEffect(() => {
-    listeners.push(setState)
+    setIsMounted(true); // Indicates component has mounted on the client
+    
+    // Listener to update local state when memoryState changes
+    const listener = (newMemoryState: State) => {
+      setCurrentMemoryState(newMemoryState);
+    };
+
+    listeners.push(listener);
+    // Sync with current memoryState in case it changed between initial render and this effect
+    setCurrentMemoryState(memoryState); 
+
     return () => {
-      const index = listeners.indexOf(setState)
+      const index = listeners.indexOf(listener);
       if (index > -1) {
-        listeners.splice(index, 1)
+        listeners.splice(index, 1);
       }
-    }
-  }, [state])
+    };
+  }, []); // Empty dependency array ensures this runs once on mount and cleans up on unmount
+
+  // On the server, and on the client before isMounted is true, return an empty toasts array.
+  // This ensures the initial render matches.
+  const toastsToRender = isMounted ? currentMemoryState.toasts : [];
 
   return {
-    ...state,
+    toasts: toastsToRender,
     toast,
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
-  }
+  };
 }
 
 export { useToast, toast }
