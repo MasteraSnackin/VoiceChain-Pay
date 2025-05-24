@@ -5,12 +5,12 @@ VoiceChain Pay is a prototype platform demonstrating voice-activated cryptocurre
 
 ## Core Features
 
--   **Voice-Activated Payment Initiation:** Users can initiate cryptocurrency payments and other blockchain interactions using simple voice commands (e.g., "Send 0.5 AVAX to Alice on Ethereum").
+-   **Live Voice Command Interface:** Utilizes the browser's Web Speech API for real-time voice input, allowing users to initiate cryptocurrency payments and other blockchain interactions using simple voice commands (e.g., "Send 0.5 AVAX to Alice on Ethereum").
 -   **AI-Powered Intent Recognition:** The application uses Genkit with Google's Gemini model to understand and parse natural language transaction requests. It extracts key details like intent (send, swap, stake), amount, recipient, token, destination chain, and infers recipient type (EOA or Smart Contract).
 -   **Cross-Chain Protocol Suggestion:** Based on the parsed intent and destination chain, the AI suggests an appropriate protocol for the transaction (e.g., Same-Chain, Chainlink CCIP for EVM-compatible chains, Avalanche Teleporter for Avalanche Subnets).
--   **Secure Voice Authentication (Simulated):** A robust voice authentication flow is implemented to verify user identity before authorizing transactions. Currently, this involves hashing the voice transcript as a proxy for true biometric voice hashing.
--   **Wallet Connection (Mocked):** Simulates integration with cryptocurrency wallets for transaction processing.
--   **Detailed Transaction Feedback:** Provides clear feedback to the user on the status of their (simulated) transaction, including details specific to the type of transfer (same-chain or cross-chain) and the protocol used.
+-   **Secure Voice Authentication (Simulated):** A robust voice authentication flow is implemented to verify user identity before authorizing transactions. Currently, this involves hashing the voice transcript (captured via Web Speech API) as a proxy for true biometric voice hashing.
+-   **Wallet Integration (MetaMask/Core, Simulated Transactions):** Connects to the user's Web3 wallet (e.g., MetaMask, Core via `window.ethereum`) to fetch account details and balance (from Avalanche Fuji Testnet). Transaction signing and execution are simulated post-authentication.
+-   **Detailed Transaction Feedback:** Provides clear visual feedback on the status of the (simulated) transaction, including details specific to the type of transfer (same-chain or cross-chain) and the protocol used.
 
 ## Tech Stack
 
@@ -22,6 +22,7 @@ VoiceChain Pay is a prototype platform demonstrating voice-activated cryptocurre
 -   **State Management:** React Context, `useState`, `useReducer` (for `useToast`)
 -   **Routing:** Next.js App Router
 -   **Linting/Formatting:** ESLint, Prettier (implied by Next.js setup)
+-   **Wallet Interaction:** Web3.js (for connecting to `window.ethereum` providers like MetaMask)
 -   **Blockchain (Conceptual):**
     -   Avalanche (C-Chain, Subnets)
     -   Chainlink CCIP (for cross-chain to external EVM chains)
@@ -33,15 +34,15 @@ VoiceChain Pay is a prototype platform demonstrating voice-activated cryptocurre
 The application conceptualizes a voice-activated payment system with the following general flow, aligning with modern cross-chain architectures:
 
 1.  **User & Voice Command:** The user issues a voice command to the frontend application.
-2.  **Voice Processing (Off-Chain - Client-Side):**
-    *   The browser's Speech Recognition API converts the user's speech to text.
-3.  **Interpretation (Off-Chain - Server-Side AI via Genkit):**
-    *   The transcribed text is sent to a Genkit AI flow (`parseTransactionIntent`).
-    *   This flow uses an LLM (e.g., Gemini) to perform Natural Language Processing (NLP). It extracts structured data: intent, amount, recipient, token, destination chain, and recipient type (EOA/SmartContract).
-    *   Crucially, it also suggests a `suggestedProtocol` (SameChain, CCIP, AvalancheTeleporter) based on the interpretation, understanding the nuances of the Avalanche ecosystem (C-Chain, Subnets) and external chains. This step prepares data that could be used by systems like Chainlink Functions.
+2.  **Voice Processing & Transcription (Off-Chain - Client-Side Browser):**
+    *   The browser's Web Speech API captures the user's speech and converts it into a text transcript in real-time.
+3.  **Intent Interpretation (Off-Chain - Server-Side AI via Genkit):**
+    *   The transcribed text is sent from the client to a Next.js Server Action, which then calls a Genkit AI flow (`parseTransactionIntent`).
+    *   This server-side flow leverages an LLM (e.g., Google's Gemini model) to perform Natural Language Processing (NLP). It extracts structured data: intent, amount, recipient, token, destination chain, and recipient type (EOA/SmartContract).
+    *   Crucially, it also suggests a `suggestedProtocol` (SameChain, CCIP, AvalancheTeleporter) based on the interpretation, understanding the nuances of the Avalanche ecosystem (C-Chain, Subnets) and external chains. This step prepares structured data that could be consumed by systems like Chainlink Functions for on-chain execution.
 4.  **User Review & Wallet Connection:**
     *   The frontend displays the parsed intent to the user for review.
-    *   The user connects their wallet (simulated in this prototype).
+    *   The user connects their wallet (e.g., MetaMask) via the browser's Ethereum provider. Account details and balance are fetched from the Avalanche Fuji Testnet.
 5.  **Voice Authentication (Simulated):**
     *   The user authenticates via voice (simulated biometric hashing of the voice transcript).
     *   A hash is generated by the `generateVoiceAuthHash` Genkit flow.
@@ -57,6 +58,7 @@ This flow emphasizes the off-chain voice processing and AI-driven interpretation
 
 ## Workflow Diagram
 
+(The "Architectural Flow" section above describes the workflow. A visual diagram could be added here in the future.)
 
 ## Getting Started
 
@@ -66,6 +68,7 @@ Follow these steps to set up and run the project locally.
 
 -   Node.js (v18 or later recommended)
 -   npm or yarn
+-   A Web3 wallet browser extension (e.g., MetaMask or Core) configured for the Avalanche Fuji Testnet.
 
 ### Installation
 
@@ -85,7 +88,7 @@ Follow these steps to set up and run the project locally.
 3.  **Set Up Environment Variables:**
     Create a `.env` file in the root of the project and add your Google API key for Genkit:
     ```env
-    GOOGLE_API_KEY=your_google_api_key_here
+    GOOGLE_API_KEY="your_google_api_key_here"
     ```
     *Note: You can obtain a Google API key from the [Google AI Studio](https://aistudio.google.com/app/apikey).*
 
@@ -115,8 +118,8 @@ Follow these steps to set up and run the project locally.
     *   Speak your command (e.g., "Send 1 AVAX to Bob", "Pay 50 USDC to shop.avax on Ethereum", "Send 10 AVAX to Alice on DFK Subnet").
     *   Click the microphone icon again (now a stop icon) to stop recording, or wait for a pause in speech.
     *   Alternatively, click one of the "Try saying:" example buttons.
-3.  **Review Parsed Intent:** The application will process your command using AI. The "Parsed Transaction Intent" card will display the structured data extracted from your command.
-4.  **Connect Wallet:** Click the "Connect Wallet (Mock)" button. A mock wallet address will be generated and displayed.
+3.  **Review Parsed Intent:** The application will process your command using AI. The "Recognized Command" card will show your spoken phrase, and the "Parsed Transaction Intent" card will display the structured data extracted from your command.
+4.  **Connect Wallet:** Click the "Connect Wallet" button. Your browser wallet (e.g., MetaMask) will prompt for connection. Ensure it's set to the Avalanche Fuji Testnet. Your address and balance will be displayed.
 5.  **Proceed to Authentication:** If the intent is clear and the wallet is connected, the "Proceed to Voice Authentication" button will become active. Click it.
 6.  **Voice Authentication:**
     *   On the "Voice Authentication" page, review the transaction details.
@@ -137,7 +140,7 @@ Follow these steps to set up and run the project locally.
 -   `src/components/`: Reusable React components.
     -   `ui/`: Shadcn/ui components.
     -   `intent-display.tsx`: Displays parsed transaction intent.
-    -   `wallet-connect.tsx`: Handles mock wallet connection.
+    -   `wallet-connect.tsx`: Handles wallet connection and balance display.
     -   `transaction-feedback.tsx`: Displays transaction status messages.
 -   `src/app/globals.css`: Global styles and Tailwind CSS theme configuration (dark purple/indigo gradient).
 -   `src/hooks/`: Custom React hooks (e.g., `use-toast.ts`, `use-mobile.ts`).
@@ -156,17 +159,20 @@ This project follows a consistent styling approach for a cohesive user experienc
 
 ## Known Limitations & Prototype Nature
 
--   **Simulated Voice Biometrics:** The voice authentication feature currently hashes the *transcript* of the spoken phrase, not the actual voice data. True voice biometric authentication is more complex.
--   **Mocked Wallet & Transactions:** Wallet connections are simulated, and no actual on-chain transactions occur. All blockchain interactions are conceptual.
+-   **Simulated Voice Biometrics:** The voice authentication feature currently hashes the *transcript* of the spoken phrase, not the actual voice data. True voice biometric authentication is more complex and would require capturing and processing raw audio.
+-   **Simulated Transactions:** While the wallet connection uses real wallet providers (e.g., MetaMask) to fetch account details and balances from the Fuji Testnet, the actual blockchain transaction (signing, sending, on-chain execution) is simulated after authentication. No actual on-chain state changes occur.
 -   **Speech Recognition API:** Relies on the browser's Web Speech API, which may have varying support and accuracy across different browsers and platforms. Microphone access is required.
--   **Error Handling:** While some error handling is in place, a production application would require more comprehensive error management and user feedback.
+-   **Error Handling:** While some error handling is in place, a production application would require more comprehensive error management and user feedback for various scenarios (network issues, API failures, contract errors, etc.).
+-   **Hardcoded Network:** Wallet interactions are currently hardcoded for the Avalanche Fuji Testnet.
 
 ## Future Enhancements
 
--   Integration with real voice biometric services.
--   Connection to actual wallet providers (e.g., MetaMask, Core).
--   Deployment of smart contracts on Avalanche testnet/mainnet.
--   Live integration with Chainlink Functions for off-chain to on-chain data delivery.
--   Support for a wider range of voice commands and DeFi interactions.
--   Streaming AI responses for a more interactive feel.
-```
+-   Integration with real voice biometric services for secure authentication.
+-   Implementation of actual transaction signing and sending to Avalanche smart contracts.
+-   Deployment of smart contracts on Avalanche testnet/mainnet for payment and DeFi logic.
+-   Live integration with Chainlink Functions for secure off-chain to on-chain data delivery.
+-   Support for a wider range of voice commands, DeFi interactions (e.g., detailed staking, swapping logic), and tokens.
+-   Streaming AI responses for a more interactive feel during intent parsing.
+-   User accounts and persistent storage for preferences or aliases.
+-   Enhanced UI/UX based on user testing and feedback.
+-   More robust error handling and user guidance.
