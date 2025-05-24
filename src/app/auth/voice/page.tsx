@@ -79,8 +79,11 @@ function VoiceAuthenticationContent() {
       setAuthStatus('authenticated');
       setStatusTitle('Authenticated!');
       setStatusMessage(`Authenticated successfully! Voice Hash: ${voiceHash?.substring(0,10)}...`);
-      toast({ title: 'Authentication Successful', description: 'Transaction can now proceed (simulated).', variant: 'default' });
-      setTimeout(() => router.push('/?auth=success'), 2000);
+      toast({ title: 'Authentication Successful', description: 'Transaction authorized. Redirecting to details page...', variant: 'default' });
+      
+      const currentParams = new URLSearchParams(searchParams.toString());
+      router.push(`/transaction/success?${currentParams.toString()}`);
+
     } else {
       setAuthStatus('failed');
       setStatusTitle('Authentication Failed');
@@ -98,6 +101,8 @@ function VoiceAuthenticationContent() {
     try {
       const { voiceAuthHash } = await generateVoiceAuthHash({ voiceSampleDataUri: audioDataUri });
       console.log('Generated Voice Auth Hash:', voiceAuthHash);
+      // Simulate authentication success/failure
+      // In a real app, this would involve comparing the hash against a stored one
       const mockAuthSuccess = Math.random() > 0.3; // 70% chance of success for demo
       handleAuthenticationResult(mockAuthSuccess, voiceAuthHash);
     } catch (error) {
@@ -122,20 +127,25 @@ function VoiceAuthenticationContent() {
     
     recognitionRef.current = new SpeechRecognitionAPI();
     const recognition = recognitionRef.current!;
-    recognition.continuous = false;
-    recognition.interimResults = false; 
+    recognition.continuous = false; // Stop after first pause
+    recognition.interimResults = false; // We only need final results
     recognition.lang = 'en-US';
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       const transcript = event.results[0][0].transcript;
       setCurrentTranscript(transcript);
-      const pseudoAudioData = btoa(transcript);
-      const pseudoAudioDataUri = `data:text/plain;base64,${pseudoAudioData}`;
+      // For this demo, we'll use the transcript itself as a stand-in for audio data.
+      // In a real app, you'd capture actual audio (e.g. using MediaRecorder),
+      // encode it (e.g. to WAV or Opus), and then create a base64 data URI.
+      const pseudoAudioData = btoa(transcript); // Base64 encode the transcript
+      const pseudoAudioDataUri = `data:text/plain;base64,${pseudoAudioData}`; // Create a data URI
       processVoiceSample(pseudoAudioDataUri);
     };
 
     recognition.onend = () => {
       setIsRecording(false);
+      // If recognition ends without a result (e.g., user stopped speaking before command given)
+      // and we are still in 'recording' status, revert to 'idle'.
       if (authStatus === 'recording') { 
         setAuthStatus('idle');
         setStatusTitle('Authentication Required');
@@ -152,16 +162,17 @@ function VoiceAuthenticationContent() {
       toast({ title: "Microphone Error", description: event.message || event.error, variant: "destructive" });
     };
     
+    // Cleanup function
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.onresult = null;
         recognitionRef.current.onend = null;
         recognitionRef.current.onerror = null;
-        recognitionRef.current.stop();
+        recognitionRef.current.stop(); // Ensure recognition is stopped when component unmounts
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // Empty dependency array: runs once on mount
 
   const handleStartAuthentication = () => {
     if (!speechApiSupported || !recognitionRef.current) {
@@ -169,12 +180,12 @@ function VoiceAuthenticationContent() {
       return;
     }
     if (isRecording) {
-      recognitionRef.current.stop();
+      recognitionRef.current.stop(); // This will trigger 'onend' and then 'onresult' if speech was captured
     } else {
-      setCurrentTranscript('');
+      setCurrentTranscript(''); // Clear previous transcript
       setAuthStatus('recording');
       setStatusTitle('Recording...');
-      setStatusMessage('Say the passphrase: "My voice is my password."'); 
+      setStatusMessage('Say the passphrase: "My voice is my password."'); // Example passphrase instruction
       try {
         recognitionRef.current.start();
         setIsRecording(true);
@@ -196,24 +207,24 @@ function VoiceAuthenticationContent() {
       case 'processing':
         return <Search className="h-20 w-20 text-primary" />; 
       case 'authenticated':
-        return <ShieldCheck className="h-20 w-20 text-green-500" />; // Use a direct green, or define a --success variable
+        return <ShieldCheck className="h-20 w-20 text-green-500" />;
       case 'failed':
         return <ShieldX className="h-20 w-20 text-destructive" />;
       default: // idle
-        return <Lock className="h-20 w-20 text-accent" />; // Uses theme accent (yellow)
+        return <Lock className="h-20 w-20 text-accent" />;
     }
   };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 text-foreground">
-      <Card className="w-full max-w-md bg-card/70 backdrop-blur-md border-border shadow-2xl"> {/* Using global card style with slight override for more transparency */}
+      <Card className="w-full max-w-md bg-card/70 backdrop-blur-md border-border shadow-2xl">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold text-card-foreground">Voice Authentication</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center space-y-6">
-          <div className="relative w-48 h-48 rounded-full bg-background/30 flex items-center justify-center shadow-inner"> {/* Adjusted background for icon container */}
+          <div className="relative w-48 h-48 rounded-full bg-background/30 flex items-center justify-center shadow-inner">
             <div className="absolute inset-0 rounded-full border-4 border-primary/50 animate-pulse"></div>
-            <div className="relative z-10 p-6 rounded-full bg-background/50"> {/* Adjusted background for icon */}
+            <div className="relative z-10 p-6 rounded-full bg-background/50"> 
               {getAuthIcon()}
             </div>
           </div>
@@ -233,7 +244,7 @@ function VoiceAuthenticationContent() {
           {authStatus !== 'authenticated' && authStatus !== 'processing' && (
             <Button 
               onClick={handleStartAuthentication} 
-              disabled={!speechApiSupported || isRecording || authStatus === 'processing'}
+              disabled={!speechApiSupported || authStatus === 'processing'} // Allow stop if recording
               className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-primary-foreground font-semibold py-3 text-lg rounded-lg shadow-lg transform transition-transform hover:scale-105 active:scale-95"
             >
               {isRecording ? <StopCircle className="mr-2 h-5 w-5" /> : <Mic className="mr-2 h-5 w-5" />}
@@ -243,15 +254,15 @@ function VoiceAuthenticationContent() {
 
           {(authStatus === 'authenticated' || authStatus === 'failed') && authStatus !== 'processing' && (
              <Button 
-              onClick={() => router.push('/')}
-              variant="secondary" // Use secondary for a different look
+              onClick={() => router.push('/')} // Go back to dashboard on fail or if user clicks before auto-redirect
+              variant="secondary" 
               className="w-full font-semibold py-3 text-lg rounded-lg shadow-lg"
             >
               Return to Dashboard
             </Button>
           )}
 
-          <div className="w-full p-4 bg-muted/30 rounded-lg text-sm space-y-2 border-border"> {/* Adjusted background */}
+          <div className="w-full p-4 bg-muted/30 rounded-lg text-sm space-y-2 border-border"> 
             <h4 className="font-semibold text-card-foreground/80">Transaction to Authorize:</h4>
             {amount && token && <p>Amount: <span className="font-bold text-foreground">{amount} {token}</span></p>}
             {recipient && <p>To: <span className="font-bold text-foreground">{recipient}</span></p>}
@@ -279,3 +290,4 @@ export default function VoiceAuthenticationPage() {
     </Suspense>
   );
 }
+
