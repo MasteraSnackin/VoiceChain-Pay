@@ -55,6 +55,9 @@ The application conceptualizes a voice-activated payment system with the followi
 
 This flow emphasizes the off-chain voice processing and AI-driven interpretation feeding into a conceptual on-chain execution, capable of handling both same-chain and complex cross-chain scenarios.
 
+## Workflow Diagram
+
+
 ## Getting Started
 
 Follow these steps to set up and run the project locally.
