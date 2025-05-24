@@ -174,15 +174,15 @@ function VoiceAuthenticationContent() {
   const getAuthIcon = () => {
     switch (authStatus) {
       case 'recording':
-        return <Mic className="h-16 w-16 text-blue-400 animate-pulse" />;
+        return <Mic className="h-20 w-20 text-blue-400 animate-pulse" />;
       case 'processing':
-        return <Loader2 className="h-16 w-16 text-blue-400 animate-spin" />;
+        return <Loader2 className="h-20 w-20 text-blue-400 animate-spin" />;
       case 'authenticated':
-        return <ShieldCheck className="h-16 w-16 text-green-400" />;
+        return <ShieldCheck className="h-20 w-20 text-green-400" />;
       case 'failed':
-        return <ShieldX className="h-16 w-16 text-red-400" />;
+        return <ShieldX className="h-20 w-20 text-red-400" />;
       default: // idle
-        return <Lock className="h-16 w-16 text-yellow-400" />;
+        return <Lock className="h-20 w-20 text-yellow-400" />;
     }
   };
 
@@ -195,8 +195,8 @@ function VoiceAuthenticationContent() {
         <CardContent className="flex flex-col items-center space-y-6">
           <div className="relative w-48 h-48 rounded-full bg-purple-800/70 flex items-center justify-center shadow-inner">
             <div className="absolute inset-0 rounded-full border-4 border-purple-600/50 animate-pulse"></div>
-            <div className="relative z-10 p-8 rounded-full bg-purple-900/60">
-              {getAuthIcon()}
+            <div className="relative z-10 p-6 rounded-full bg-purple-900/60"> {/* Adjusted padding */}
+              {getAuthIcon()} {/* Icon size adjusted in getAuthIcon */}
             </div>
           </div>
           
@@ -245,7 +245,7 @@ function VoiceAuthenticationContent() {
         </CardContent>
         <CardFooter className="text-center flex-col space-y-2 pt-6 pb-4 text-xs text-purple-400">
           <p className="flex items-center justify-center">
-            <Lock className="h-3 w-3 mr-1.5"/> Voice biometrics processed for verification.
+            <Lock className="h-3 w-3 mr-1.5"/> Voice biometrics stored securely on-chain.
           </p>
           <p className="flex items-center justify-center">
             <Zap className="h-3 w-3 mr-1.5"/> Powered by Avalanche Subnet Technology
