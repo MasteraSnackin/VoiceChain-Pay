@@ -1,3 +1,4 @@
+
 // src/app/auth/voice/page.tsx
 'use client';
 
@@ -146,7 +147,7 @@ function VoiceAuthenticationContent() {
       setIsRecording(false);
       // If recognition ends without a result (e.g., user stopped speaking before command given)
       // and we are still in 'recording' status, revert to 'idle'.
-      if (authStatus === 'recording') { 
+      if (authStatus === 'recording' && !currentTranscript) { 
         setAuthStatus('idle');
         setStatusTitle('Authentication Required');
         setStatusMessage('Recording stopped. Click Start Authentication to try again.');
@@ -172,7 +173,7 @@ function VoiceAuthenticationContent() {
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array: runs once on mount
+  }, [authStatus, currentTranscript]); // Added authStatus and currentTranscript to dependencies
 
   const handleStartAuthentication = () => {
     if (!speechApiSupported || !recognitionRef.current) {
@@ -244,7 +245,7 @@ function VoiceAuthenticationContent() {
           {authStatus !== 'authenticated' && authStatus !== 'processing' && (
             <Button 
               onClick={handleStartAuthentication} 
-              disabled={!speechApiSupported || authStatus === 'processing'} // Allow stop if recording
+              disabled={!speechApiSupported || (authStatus === 'processing' && !isRecording)}
               className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-primary-foreground font-semibold py-3 text-lg rounded-lg shadow-lg transform transition-transform hover:scale-105 active:scale-95"
             >
               {isRecording ? <StopCircle className="mr-2 h-5 w-5" /> : <Mic className="mr-2 h-5 w-5" />}
@@ -290,4 +291,3 @@ export default function VoiceAuthenticationPage() {
     </Suspense>
   );
 }
-
