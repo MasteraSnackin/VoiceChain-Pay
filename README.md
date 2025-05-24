@@ -18,15 +18,16 @@ The application generally follows this flow:
 1.  **Voice Command:** The user issues a voice command (e.g., "Send 10 AVAX to John on Ethereum").
 2.  **Voice Processing (Off-Chain):**
     *   The browser's Speech Recognition API converts speech to text.
-    *   A Genkit AI flow processes this text for NLP, extracting structured transaction intent (amount, recipient, token, destination chain, etc.).
+    *   A Genkit AI flow processes this text for NLP, extracting structured transaction intent (amount, recipient, token, destination chain, etc.). This AI is designed to understand the nuances of the Avalanche ecosystem, including its C-Chain and various Subnets (custom L1s), preparing data for subsequent on-chain processing.
 3.  **User Review & Wallet Connection:** The user reviews the parsed intent and connects their wallet (simulated).
 4.  **Voice Authentication:** The user authenticates via voice biometrics (simulated).
-5.  **Transaction Simulation:**
-    *   Based on the intent (e.g., same-chain or cross-chain), the system simulates the appropriate transaction path.
-    *   For cross-chain, it indicates the use of protocols like Chainlink CCIP or Avalanche Teleporter.
+5.  **Transaction Simulation (Conceptual On-Chain Interaction):**
+    *   Based on the intent (e.g., same-chain on Avalanche C-Chain, cross-chain to an Avalanche Subnet, or cross-chain to an external network), the system simulates the appropriate transaction path.
+    *   For cross-chain scenarios, it indicates the use of protocols like Chainlink CCIP (for external EVM chains) or Avalanche Teleporter (for communication between Avalanche Subnets). These protocols are chosen for their security and interoperability features.
+    *   The on-chain components (smart contracts, transaction finalization) are envisioned to operate on the **Avalanche blockchain**, leveraging its scalability, low finality times, and the customizability offered by Subnets for specialized applications.
 6.  **Confirmation Feedback:** The user receives detailed feedback on the success page about the (simulated) transaction.
 
-This flow mirrors a system where off-chain components handle voice processing and intent interpretation, which then feeds into on-chain (or cross-chain protocol) actions.
+This flow mirrors a system where off-chain components handle voice processing and intent interpretation, which then feeds into on-chain (or cross-chain protocol) actions within the Avalanche network or beyond. The use of tools like Chainlink Functions would be conceptualized to bridge the off-chain interpreted data to the on-chain smart contracts.
 
 ## Style Guidelines
 
@@ -56,3 +57,5 @@ To get started with VoiceChain Pay:
 6.  **Test the Flow:** Use voice commands or the example buttons to initiate a transaction, connect the mock wallet, and proceed through voice authentication to see the simulated transaction outcome.
 
 For more detailed information on specific features or implementation details, please refer to the `docs/blueprint.md` file.
+
+```
