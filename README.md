@@ -6,8 +6,15 @@ VoiceChain Pay is a prototype platform demonstrating voice-activated cryptocurre
 - Video: https://www.youtube.com/watch?v=cnFY2yeKZiU
 - Demo:
 
-## ScreenShoot
+## ScreenShoots
+![image](https://github.com/user-attachments/assets/ad67fb36-d425-442d-97b7-af4bd0c3b3d3)
+
 ![](https://github.com/MasteraSnackin/VoiceChain-Pay/blob/main/docs/Screenshot%202025-05-25%20074821.png)
+
+
+
+
+
 
 ## Cross-Chain Payment System Architecture 
 ![](https://github.com/MasteraSnackin/VoiceChain-Pay/blob/main/docs/2Screenshot%202025-05-25%20083200.png)
