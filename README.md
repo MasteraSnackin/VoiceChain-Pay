@@ -161,6 +161,84 @@ Follow these steps to set up and run the project locally.
 
 ## Code Structure
 
+```
+.
+├── .env
+├── .vscode/
+│   └── settings.json
+├── apphosting.yaml
+├── components.json
+├── next.config.ts
+├── package.json
+├── README.md
+├── readme2.md
+├── src/
+│   ├── ai/
+│   │   ├── dev.ts
+│   │   ├── flows/
+│   │   │   ├── generate-voice-auth-hash.ts
+│   │   │   └── parse-transaction-intent.ts
+│   │   └── genkit.ts
+│   ├── app/
+│   │   ├── actions.ts
+│   │   ├── auth/
+│   │   │   └── voice/
+│   │   │       └── page.tsx
+│   │   ├── transaction/
+│   │   │   └── success/
+│   │   │       └── page.tsx
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   └── page.tsx
+│   ├── components/
+│   │   ├── ui/
+│   │   │   ├── accordion.tsx
+│   │   │   ├── alert-dialog.tsx
+│   │   │   ├── alert.tsx
+│   │   │   ├── avatar.tsx
+│   │   │   ├── badge.tsx
+│   │   │   ├── button.tsx
+│   │   │   ├── calendar.tsx
+│   │   │   ├── card.tsx
+│   │   │   ├── chart.tsx
+│   │   │   ├── checkbox.tsx
+│   │   │   ├── dialog.tsx
+│   │   │   ├── dropdown-menu.tsx
+│   │   │   ├── form.tsx
+│   │   │   ├── input.tsx
+│   │   │   ├── label.tsx
+│   │   │   ├── menubar.tsx
+│   │   │   ├── popover.tsx
+│   │   │   ├── progress.tsx
+│   │   │   ├── radio-group.tsx
+│   │   │   ├── scroll-area.tsx
+│   │   │   ├── select.tsx
+│   │   │   ├── separator.tsx
+│   │   │   ├── sheet.tsx
+│   │   │   ├── skeleton.tsx
+│   │   │   ├── slider.tsx
+│   │   │   ├── switch.tsx
+│   │   │   ├── table.tsx
+│   │   │   ├── tabs.tsx
+│   │   │   ├── textarea.tsx
+│   │   │   ├── toast.tsx
+│   │   │   ├── toaster.tsx
+│   │   │   └── tooltip.tsx
+│   │   ├── intent-display.tsx
+│   │   ├── transaction-feedback.tsx
+│   │   └── wallet-connect.tsx
+│   ├── hooks/
+│   │   ├── use-mobile.tsx
+│   │   └── use-toast.ts
+│   └── lib/
+│       └── utils.ts
+├── tailwind.config.ts
+└── tsconfig.json
+```
+
+
+
+
 -   `src/app/page.tsx`: Main application page, handles voice input and initial intent display.
 -   `src/app/auth/voice/page.tsx`: Voice authentication page.
 -   `src/app/transaction/success/page.tsx`: Page displayed after successful transaction.
