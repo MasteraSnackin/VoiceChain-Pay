@@ -3,9 +3,14 @@
 
 VoiceChain Pay is a prototype platform demonstrating voice-activated cryptocurrency payments and DeFi interactions, primarily focused on the Avalanche ecosystem and exploring cross-chain capabilities. It leverages AI for natural language understanding and aims to provide a seamless, voice-first user experience for blockchain transactions.
 
-Video: https://www.youtube.com/watch?v=cnFY2yeKZiU
-Demo:
+- Video: https://www.youtube.com/watch?v=cnFY2yeKZiU
+- Demo:
 
+## ScreenShoot
+![](https://github.com/MasteraSnackin/VoiceChain-Pay/blob/main/docs/Screenshot%202025-05-25%20074821.png)
+
+## Cross-Chain Payment System Architecture 
+![](https://github.com/MasteraSnackin/VoiceChain-Pay/blob/main/docs/2Screenshot%202025-05-25%20083200.png)
 
 ## Core Features
 
@@ -18,20 +23,23 @@ Demo:
 -   **Cross-Chain Protocol Suggestion:** Based on the parsed intent and destination chain, the AI suggests an appropriate protocol for the transaction (e.g., Same-Chain, Chainlink CCIP for EVM-compatible chains, Avalanche Teleporter for Avalanche Subnets).
 
 
+## Sequence Diagram 
+![](https://github.com/MasteraSnackin/VoiceChain-Pay/blob/main/docs/1Screenshot%202025-05-25%20082739.png)
+
   
 -   **Secure Voice Authentication (Simulated):** A robust voice authentication flow is implemented to verify user identity before authorizing transactions. Currently, this involves hashing the voice transcript (captured via Web Speech API) as a proxy for true biometric voice hashing.
-
-
-
-
 
 
 -   **Wallet Integration (MetaMask/Core):** Connects to the user's Web3 wallet (e.g., MetaMask, Core via `window.ethereum`) to fetch account details and balance (from Avalanche Fuji Testnet).
 
 
-
-
 -   **Detailed Transaction Feedback:** Provides clear visual feedback on the status of the (simulated) transaction, including details specific to the type of transfer (same-chain or cross-chain) and the protocol used.
+
+
+## Voice-Activted Blockchain Payment Flow 
+![](https://github.com/MasteraSnackin/VoiceChain-Pay/blob/main/docs/2Screenshot%202025-05-25%20083040.png)
+
+
 
 ## Tech Stack
 
@@ -77,9 +85,10 @@ The application conceptualizes a voice-activated payment system with the followi
 
 This flow emphasizes the off-chain voice processing and AI-driven interpretation feeding into a conceptual on-chain execution, capable of handling both same-chain and complex cross-chain scenarios.
 
-## Workflow Diagram
+## Voice-activated Payment System Architecture
 
 
+![](https://github.com/MasteraSnackin/VoiceChain-Pay/blob/main/docs/2Screenshot%202025-05-25%20083004.png)
 
 
 
